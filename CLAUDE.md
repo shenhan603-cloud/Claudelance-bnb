@@ -1,0 +1,267 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/yeheskieltame/claudelance/main/assets/logo.png" alt="Claudelance" width="180" />
+</p>
+
+# Claudelance - Working Notes for Claude
+
+[![sdk npm](https://img.shields.io/npm/v/@yeheskieltame/claudelance-sdk.svg?label=sdk&color=cb3837)](https://www.npmjs.com/package/@yeheskieltame/claudelance-sdk)
+[![sdk downloads](https://img.shields.io/npm/dt/@yeheskieltame/claudelance-sdk.svg?label=sdk%20downloads)](https://www.npmjs.com/package/@yeheskieltame/claudelance-sdk)
+[![types npm](https://img.shields.io/npm/v/@yeheskieltame/claudelance-types.svg?label=types&color=cb3837)](https://www.npmjs.com/package/@yeheskieltame/claudelance-types)
+[![types downloads](https://img.shields.io/npm/dt/@yeheskieltame/claudelance-types.svg?label=types%20downloads)](https://www.npmjs.com/package/@yeheskieltame/claudelance-types)
+[![coworking-sdk npm](https://img.shields.io/npm/v/@yeheskieltame/claudelance-coworking-sdk.svg?label=coworking-sdk&color=cb3837)](https://www.npmjs.com/package/@yeheskieltame/claudelance-coworking-sdk)
+[![coworking-sdk downloads](https://img.shields.io/npm/dt/@yeheskieltame/claudelance-coworking-sdk.svg?label=coworking-sdk%20downloads)](https://www.npmjs.com/package/@yeheskieltame/claudelance-coworking-sdk)
+[![coworking-types npm](https://img.shields.io/npm/v/@yeheskieltame/claudelance-coworking-types.svg?label=coworking-types&color=cb3837)](https://www.npmjs.com/package/@yeheskieltame/claudelance-coworking-types)
+[![coworking-types downloads](https://img.shields.io/npm/dt/@yeheskieltame/claudelance-coworking-types.svg?label=coworking-types%20downloads)](https://www.npmjs.com/package/@yeheskieltame/claudelance-coworking-types)
+
+> The universal onchain marketplace for AI agent labor - code, research, analysis, content, and more - settled in cUSD, CELO, or USDC on Celo.
+> Hackathon: Celo Proof of Ship #8 (May 4-29, 2026). Submission Day 7 (May 21).
+> Full spec lives in `Blueprint.md`. v3 expansion: `docs/v3-task-catalog.md` + `docs/v3-contract-architecture.md`. Live deployment records: `contracts/deployments/celo-{mainnet,sepolia}.json`.
+
+## Locked decisions (do not re-litigate)
+
+| Topic | Decision |
+|-------|----------|
+| Project name | `claudelance` (npm names: `@yeheskieltame/claudelance-*`, matches GitHub owner for Packages registry compat) |
+| GitHub host | `github.com/yeheskieltame` (personal account, no org) |
+| LLM (Phase 1) | Claude Code CLI only |
+| Worker wallet | Dual mode: generate locally OR provide existing |
+| Worker GitHub auth | Operator's Personal Access Token |
+| Worker identity | ERC-8004 Identity NFT required to `claimSlot` (Celo deployed registries) |
+| Token whitelist | cUSD + CELO ERC20 + USDC; one-way `allowToken`; per-token `minBounty` mapping |
+| Hire modes | **Direct-hire only as of 2026-05-17** (`postDirectHire` to a chosen ERC-8004 worker). The open `postBounty` path stays in the contract but is not used for new bounties during the hackathon; current activity runs through the operator's own validation agents. Any remaining public-round PR backlog is resolved off-protocol. **2026-06-07:** the open `postBounty` path was validated once end-to-end on mainnet (operator dogfood, bounty #9 - poster + claimer are operator wallets, issue informational). **2026-06-10:** validated again as v3 bounty #22 (open mode, operator dogfood, issue #470 / PR #471) - first lifecycle where the Railway keeper closed the tail unattended (`settleStake` + `attestReputation`, agent 9066 feedback 2→3). These are code-path tests, not a public-round reopening; the no-public-bounty policy stands. |
+| Stake policy | `stake > 0` required on ALL bounties (open + direct) |
+| Bidding | Poster-defined max slots, merit-based winner (open mode) or pre-selected worker (direct) |
+| Protocol fee | 2% on resolved bounties, per-token accounting |
+| Submission method | Unified: GitHub PR (all bounty types) |
+| Off-chain config | `claudelance/bounties-registry` (JSON), keccak256 hash onchain |
+| Phase 1 UI bounty types | All v3 types 0-10 live in the web post form (type picker, per-type deliverable hints, disclaimer notice for 8/9); CI checkbox only for types 0/5 |
+| Smart contract bounty types | 0-255 (future-proof); v3 defines canonical types 0-10 |
+| v3 contract pattern | UUPS upgradeable (EIP-1822) via OZ upgradeable contracts; `_authorizeUpgrade` gated to Safe multisig; EIP-7201 namespaced storage |
+| v3 submission method | `submitDeliverable(url, contentHash)` - GitHub PR for code, Gist/IPFS/Arweave for all other types |
+| Hackathon tracks | MiniApps + AI Powered Apps & Agents (dual entry) |
+| npm strategy | 2 packages by Day 7 + 4 more Day 9-15 |
+| Contract base (v2) | `ReentrancyGuard + Ownable2Step + Pausable` (immutable, no upgrade proxy) - permanent for code bounties |
+| Contract base (v3) | UUPS proxy + `Ownable2StepUpgradeable + PausableUpgradeable` (OZ v5 dropped `ReentrancyGuardUpgradeable`; reentrancy flag lives in `CoreStorage._locked` via EIP-7201 namespace) |
+| Stake settlement | Pull pattern via `settleStake(bountyId, worker)` - `pickWinner` stays O(1) |
+| Treasury payout | Pull pattern via `earnings[treasury][token]` - no push transfers to recipients |
+| Admin key rotation | 2-day timelock + 14-day validity window on `treasury` / `ciRelayer` rotation |
+| Mainnet wallet topology | 4 distinct keys - `Deploy.s.sol` aborts on chainid 42220 if any collide. Owner is a Safe multisig (threshold 2). |
+| Mainnet deployer | Must be the user's Talent-registered address (`0x77c4a1c…`) for Celo Proof of Ship attribution |
+| Mainnet v2 status | **LIVE** at `0x1362d874F40B7e28836cBeCcA14f5EfBe6c6E423`, Celoscan-verified, allowToken applied for cUSD/CELO/USDC. As of 2026-05-24: 76 of 92 bounties resolved, 1.52 CELO protocol fees, 30 operator-run validation wallets, `uniquePosterCount = 1`. Operator dogfooding only - never label as organic adoption. |
+| Mainnet v3 status | **LIVE** - proxy `0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8`, impl `0x92b7d04E9A3fa3C96bfc891D8E8dB61Fe6C1D49C`, deployed 2026-06-04, Celoscan-verified. cUSD/CELO/USDC whitelisted via Safe multisig. Accepts task types 0-10. **v3.1 LIVE (2026-06-10):** proxy upgraded via Safe to impl `0x01A7Ee90F121Bd57BD1059f5B347C98e37aAaea7` (`version()` = 3.1.0). Adds permissionless `attestReputation(bountyId, agentId)` writing +1 ERC-8004 feedback per resolved bounty (PR #462). All 21 resolved v3 bounties backfilled from the relayer wallet - 9 worker agents (ids 9061-9072) now carry registry feedback with the proxy as client. |
+| Sepolia v3 status | **LIVE** - proxy `0x64b45Fe2C64951013389740AD530e5c664fd0Ffe`, impl `0x1fb667a40159e4652A89dDFC9ADF3eEcB6F0A572`, deployed 2026-06-04, tokens whitelisted inline. |
+
+## Repo structure
+
+| Path | Status | Notes |
+|------|--------|-------|
+| `contracts/` | v2 LIVE mainnet + Sepolia | Foundry, Solidity 0.8.24, OZ v5 |
+| `contracts/src/v3/` | **v3 LIVE mainnet + Sepolia** | UUPS proxy, task types 0-10, EIP-7201 storage, 144 tests |
+| `apps/web/` | LIVE at claudelance.xyz, targets mainnet v3 | Next.js 15 MiniPay app on the v3 proxy (post all task types 0-10 / feed / detail / worker / revenue + MiniPay + Privy); deploy = manual `vercel --prod` from repo root |
+| `apps/relayer/` | **LIVE on Railway (2026-06-10)** | Always-on keeper for the ERC-8004 agent (#465, #468): `settleStake`/`cancelExpired`/`attestReputation` every 5 min on mainnet v3, plus the signed GitHub CI webhook (dormant under direct-hire). Railway project `claudelance-relayer`, Docker build, no public domain (no ingress; healthcheck internal). Key only in Railway service variables. Simulate-first writes, live gas price, agentId cache. Rollout was dry-run-first. |
+| `packages/worker/` | **BUILT (runtime LIVE 2026-06-23)** | `@yeheskieltame/claudelance-worker` (`clw`) - zero-dep ESM runtime that runs the team as **independent multi-agent Claude Code workers coordinating only through the Coworking API**. `clw bootstrap` (members+keys+CLX project+backlog), `clw kits` (per-role agent kit = `.mcp.json` -> `<api>/mcp` + brief + run.sh), `clw run <role>` (headless plan/apply loop), `clw orchestrate`/`status` (Tech Lead). Roster + backlog in `src/roster.js`. Live on workspace `claudelance` at `coworking-api-production-7f61.up.railway.app` (9 expert members + CLX board seeded). Secrets/kits gitignored (`.local/`, `workers/`). Supersedes the old on-chain bounty-farming scripts (now archived in `scripts/legacy/`). |
+| `packages/types/` | v0.6.6 LIVE on npmjs + GH Packages | `@yeheskieltame/claudelance-types` shared ABI + types; V3 ABI mirrors the deployed proxy exactly (UUPS/Pausable/Ownable2Step + OZ errors) |
+| `packages/sdk/` | v0.7.2 LIVE on npmjs + GH Packages | `@yeheskieltame/claudelance-sdk` agent client; resilient multi-RPC transport (`buildTransport`, fallback + JSON-RPC batching + retry), `fromEnv()` zero-config factory, `getBalances()`/`health()`/`estimatePayout()` helpers, live Celo gas-price read, `isPaused()`/`getImplementation()`, lifecycle watchers, typed errors |
+| `packages/contracts/` | not started (post-hackathon backlog) | `@yeheskieltame/claudelance-contracts` ABI artifacts |
+| `packages/react/` | not started (post-hackathon backlog) | `claudelance-react` hooks |
+| `packages/cli/` | not started (post-hackathon backlog) | `@yeheskieltame/claudelance-cli` (binaries `claudelance` and `cln`) |
+| `docs/v3-task-catalog.md` | DONE | 10 task type specs, pricing, verification matrix |
+| `docs/v3-contract-architecture.md` | DONE | UUPS design, storage layout, upgrade plan |
+| `apps/coworking-api/` | **NEW** (backend P0-P3 merged via PR #611; FE on `kiel-dev/coworking-fe`) | **Claudelance Coworking** - agent-native PM/coordination backend (REST + MCP), Hono + Postgres (Drizzle), web2/off-chain, Railway. Workspaces/projects/tasks/board/comments/deps + activity blackboard + time/goals/automations/webhooks + premium gating. 5 pglite integration tests. Does NOT touch the contract. |
+| `packages/coworking-types/` + `packages/coworking-sdk/` | **v0.2.0 LIVE on npmjs** | `@yeheskieltame/claudelance-coworking-types` (shared types/enums) + `@yeheskieltame/claudelance-coworking-sdk` (`CoworkingClient` typed REST/MCP client). Published 2026-06-19 with the Task Model v2 surface (19 task types, acceptance criteria, review loop, templates, reset, reputation-bridge methods, `getMe`). **2026-06-23:** added `createMember()` + `createApiKey()` to the SDK source (admin-scoped); dist rebuilds on next publish. GH Packages mirror pending. |
+| `apps/web/app/coworking/` | **NEW** (on `kiel-dev/coworking-fe`) | Coworking UI: onboarding → dashboard → kanban board, bring-your-own workspace key (localStorage), react-query. |
+| `docs/coworking.md` | DONE | Coworking reference - covers Task Model v2 (19 task types, per-type fields, acceptance criteria + DoD, RACI + review loop, labels, templates, reset handshake/guardrails), REST + MCP + SDK surfaces, "Using the board" (FE), data model, premium + deploy. |
+
+Supplementary repos under `github.com/yeheskieltame/`: `bounties-registry` (Phase 1 JSON spec hashed on-chain), `content-submissions`, `video-submissions` (Phase 2).
+
+## Tech stack pinned versions
+
+- Solidity `0.8.24`, Foundry nightly, OpenZeppelin `^5.0.0`, forge-std `^1.9.0`
+- Next.js `15.x` (App Router), React `19.x`, TS `5.x`, Tailwind `3.4.x`, shadcn/ui
+- viem `^2.21.0`, wagmi `^2.12.0`, @tanstack/react-query `^5.x`, zod `^3.x`
+- Worker: Node `>=20`, @octokit/rest `^21.x`, simple-git `^3.x`, commander `^12.x`, inquirer `^10.x`, bip39 `^3.x`
+- Relayer: Hono `^4.x`, better-sqlite3 `^11.x`, @octokit/webhooks `^13.x`, pino `^9.x`
+
+## Networks, tokens, registries
+
+- Prod: Celo Mainnet - `https://forno.celo.org`
+- Dev: Celo Sepolia - `https://forno.celo-sepolia.celo-testnet.org/`
+- Mainnet token canonical addresses:
+  - cUSD: `0x765DE816845861e75A25fCA122bb6898B8B1282a`
+  - CELO ERC20: `0x471EcE3750Da237f93B8E339c536989b8978a438`
+  - USDC: `0xcebA9300f2b948710d2653dD7B07f33A8B32118C`
+- ERC-8004 (Celo-deployed):
+  - Mainnet Identity: `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`
+  - Mainnet Reputation: `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63`
+  - Sepolia Identity: `0x8004A818BFB912233c491871b3d84c89A494BD9e`
+  - Sepolia Reputation: `0x8004B663056A597Dffe9eCcC1965A193B7388713`
+- Faucet: https://faucet.celo.org/celo-sepolia
+
+### BNB Chain (multichain expansion - additive, Celo stays default/prod)
+
+- BSC Mainnet 56 (`https://bsc-dataseed.bnbchain.org`, bscscan.com) / BSC Testnet 97 (`https://data-seed-prebsc-1-s1.bnbchain.org:8545`, testnet.bscscan.com, faucet https://www.bnbchain.org/en/testnet-faucet)
+- Token slots keep their Celo keys (`cUSD`/`CELO`/`USDC`) but hold USDT / WBNB / USDC on BSC - all 18 decimals. Display via `Deployment.tokenSymbols` / SDK `NETWORK_META`.
+- ERC-8004 on BSC: same reference CREATE2 addresses as Celo (mainnet `0x8004A169...` / `0x8004BAa1...`, testnet `0x8004A818...` / `0x8004B663...`), bytecode confirmed on-chain.
+- BSC testnet (97) core proxy `0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5` is live (`BSC_TESTNET_V3`, `live: true`). BSC mainnet NOT deployed yet: `BSC_MAINNET_V3` has `core = 0x0`, `live: false`. SDK needs `coreAddress` (or `CLAUDELANCE_CORE_ADDRESS`); relayer needs `CORE_ADDRESS` + `EVENTS_FROM_BLOCK` + `IDENTITY_EVENTS_FROM_BLOCK`.
+
+## Smart contract surface (`ClaudelanceCore.sol` v2)
+
+Single contract - `ReentrancyGuard + Ownable2Step + Pausable`. Public mutating fns:
+- Poster (open): `postBounty(token, ...)`
+- Poster (direct hire): `postDirectHire(token, targetWorker, ...)` - forces `maxSlots=1`, `ciRequired=false`
+- Poster (any): `pickWinner`, `cancelExpired`
+- Worker: `claimSlot` (ERC-8004 gated + targetWorker gated), `submitPR`, `withdrawEarnings(token)`
+- Anyone (permissionless after resolution): `settleStake(bountyId, worker)`
+- Relayer: `attestCI`
+- Admin (immediate): `allowToken(token, minAmount)` (one-way), `setMinBounty(token, amount)`
+- Admin (2-day timelock + 14-day validity window): `proposeTreasury`, `applyTreasury`, `cancelPendingTreasury`, `proposeCIRelayer`, `applyCIRelayer`, `cancelPendingCIRelayer`, `pause`, `unpause`, `rescueERC20`
+
+Constants: `PROTOCOL_FEE_BPS = 200` (2%), `MAX_SLOTS = 20`, `MIN_DEADLINE = 1 days`, `MAX_DEADLINE = 14 days`, `RESOLUTION_GRACE_PERIOD = 3 days`, `ADMIN_TIMELOCK = 2 days`, `PROPOSAL_VALIDITY_WINDOW = 14 days`. `MIN_BOUNTY` is now per-token (admin-set via `allowToken` / `setMinBounty`).
+
+Stats are per-token: `totalBountyVolume[token]`, `totalProtocolRevenue[token]`. Globals: `totalBountiesResolved`, `uniquePosterCount`, `uniqueWorkerCount`, `bountyCount`, `bountyCountByType[type]`. View `getStats(token)` returns the 5-tuple for a single token; frontend aggregates across tokens via price oracle.
+
+Per-bounty tx count: posting + N claims + N submits + N attests + pickWinner + N settleStake + worker withdraws. Poster's hot path (`pickWinner`) stays O(1).
+
+### v2 Mainnet deployment (LIVE 2026-05-15)
+
+| Role | Address |
+|------|---------|
+| ClaudelanceCore v2 (verified) | `0x1362d874F40B7e28836cBeCcA14f5EfBe6c6E423` on chain 42220 |
+| cUSD | `0x765DE816845861e75A25fCA122bb6898B8B1282a` (Mento canonical) |
+| CELO ERC20 | `0x471EcE3750Da237f93B8E339c536989b8978a438` |
+| USDC | `0xcebA9300f2b948710d2653dD7B07f33A8B32118C` (Circle, Celo native) |
+| ERC-8004 Identity | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` (`AgentIdentity` / `AGENT` / IERC721) |
+| ERC-8004 Reputation | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` |
+| owner | `0xe9Fc48f315fD4E989637fAcC29AaF2717E19f7F0` (Safe multisig, threshold 2) |
+| treasury | `0xCC0cCac212999612BdDdEb607B33CC1a46F8A401` |
+| ciRelayer | `0x1fEDda23c2945D59f3929e6C463cF685aC077ad5` |
+| deployer | `0x77c4a1cD22005b67Eb9CcEaE7E9577188d7Bca82` (Talent Protocol registered) |
+
+### v3 Mainnet deployment (LIVE 2026-06-04)
+
+| Role | Address |
+|------|---------|
+| ClaudelanceProxy v3 (verified) | `0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8` on chain 42220 |
+| ClaudelanceCoreV3 implementation (verified) | `0x92b7d04E9A3fa3C96bfc891D8E8dB61Fe6C1D49C` |
+| cUSD (whitelisted, min 0.5) | `0x765DE816845861e75A25fCA122bb6898B8B1282a` |
+| CELO ERC20 (whitelisted, min 1) | `0x471EcE3750Da237f93B8E339c536989b8978a438` |
+| USDC (whitelisted, min 0.5) | `0xcebA9300f2b948710d2653dD7B07f33A8B32118C` |
+| ERC-8004 Identity | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
+| ERC-8004 Reputation | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` |
+| owner | `0xe9Fc48f315fD4E989637fAcC29AaF2717E19f7F0` (Safe multisig, threshold 2) |
+| treasury | `0xCC0cCac212999612BdDdEb607B33CC1a46F8A401` |
+| ciRelayer | `0x1fEDda23c2945D59f3929e6C463cF685aC077ad5` |
+| deployer | `0x77c4a1cD22005b67Eb9CcEaE7E9577188d7Bca82` (Talent Protocol registered) |
+
+### v3 Sepolia deployment (LIVE 2026-06-04, dev/staging)
+
+| Role | Address |
+|------|---------|
+| ClaudelanceProxy v3 (verified) | `0x64b45Fe2C64951013389740AD530e5c664fd0Ffe` on chain 11142220 |
+| ClaudelanceCoreV3 implementation (verified) | `0x1fb667a40159e4652A89dDFC9ADF3eEcB6F0A572` |
+| MockCUSD (whitelisted, min 0.5) | `0xeB9595f4d14A4AEB23cc535007c973e50F1307E7` |
+| MockCELO (whitelisted, min 1) | `0x68128f321E01C2388628c549E3a4Ea016DB01968` |
+| MockUSDC (whitelisted, min 0.5) | `0x71f44190dCE495b663700A3e96909988b8fbF3F9` |
+| ERC-8004 Identity | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
+| owner / treasury / relayer | `0x987e2ed458ddAF6f900362F94558378056dCc226` (single key, Sepolia only) |
+
+### v2 Sepolia deployment (LIVE 2026-05-14, dev/staging)
+
+| Role | Address |
+|------|---------|
+| ClaudelanceCore v2 (verified) | `0xC478e36CC213Cb459282b5B690bF8FF4975A911F` on chain 11142220 |
+| MockCUSD | `0xeB9595f4d14A4AEB23cc535007c973e50F1307E7` (min 0.5 cUSD) |
+| MockCELO | `0x68128f321E01C2388628c549E3a4Ea016DB01968` (min 1 CELO) |
+| MockUSDC | `0x71f44190dCE495b663700A3e96909988b8fbF3F9` (min 0.5 USDC) |
+| ERC-8004 Identity | `0x8004A818BFB912233c491871b3d84c89A494BD9e` (Celo-deployed) |
+| ERC-8004 Reputation | `0x8004B663056A597Dffe9eCcC1965A193B7388713` (Celo-deployed) |
+| owner / treasury / relayer | `0x987e2ed458ddAF6f900362F94558378056dCc226` (single key, Sepolia only) |
+
+> **Historical note:** an earlier mainnet contract at `0x775d4278Ad3f5695fbab3c3313175e9D85811AB5` (cUSD-only ABI) was deployed and verified on 2026-05-14 but never received traffic; superseded by v2 above.
+
+## MCP / tooling installed (Day 0)
+
+| Tool | Purpose |
+|------|---------|
+| celo-mcp | Chain data (balance, tx, contract, governance, staking) - Blueprint Section 13 required |
+| github MCP (HTTP) | Repo/PR/issue/workflow management via natural language (OAuth on first use) |
+| context7 MCP | Up-to-date docs for Next.js 15, viem, wagmi, Foundry, OpenZeppelin v5 |
+| gh CLI | Local git+GitHub operations, `gh auth login` required before use |
+| foundry / forge | Smart contract dev (already installed) |
+| pnpm, node v25 | Monorepo + worker CLI |
+
+Built-in skills relevant: `/security-review` (run before every contract commit), `/review` (worker PR review), `/init`.
+
+## Proof of Ship scoring axes (what the program measures)
+
+1. **Onchain** - Celo mainnet tx, unique users, contract activity
+2. **GitHub** - commits, PRs, stars, contributions
+3. **Revenue** - value transacted + fees
+4. **npm** - packages + weekly downloads
+
+These are the program's published axes. Report them honestly: on-chain activity to date is operator-run validation (label it as such - never present it as organic adoption or customer revenue), and all submission copy must match the verifiable on-chain state.
+
+Eligibility gates that must pass: MiniPay-compatible (`useMiniPayDetection`), Celo mainnet deploy (verified Celoscan, **done**), Talent Protocol + KarmaGAP submission.
+
+## Working conventions
+
+- Treat Blueprint.md as authoritative for decisions; ask before deviating.
+- Smart contracts are immutable on mainnet. Every contract diff goes through `/security-review`, Slither, and the invariant suite (`forge test --match-path "test/invariant/*"`) before commit.
+- All post-Day-1 changes ship via `kiel-dev` branch, then PR, then self-review, then `gh pr merge --merge --delete-branch`. Per-file commits are preferred; per-context PRs are preferred over kitchen-sink PRs (keeps history reviewable).
+- PR descriptions on worker-generated PRs MUST include: `Closes #<issue>`, `Claudelance Bounty: #<id>`, `Agent: claudelance-worker-#<id>`.
+- **Bounty issue policy (2026-05-17 onward):** new bounties run as `postDirectHire` on-chain calls to the operator's own validation agents under `./claudelance worker/` (local, gitignored). The matching GitHub issue is informational (links the on-chain bountyId + repo URL + spec). These are operator dogfooding runs, not open calls for public contributors, so they are not labeled `bounty-open` / `help-wanted`. If an external contributor self-submits, tell them honestly that current bounties are operator-run validation, and point them to the open `postBounty` path when real public rounds reopen.
+- Worker rate limit: 30 GitHub req/min.
+- Mainnet broadcasts go through `--verify` against Celoscan (Etherscan API V2).
+- Indonesian (Bahasa) is fine in chat; code, comments, commit messages stay in English.
+
+### v3 ABI surface (ClaudelanceCoreV3, new default target)
+
+All new tooling targets v3 proxy `0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8` (mainnet) / `0x64b45Fe2C64951013389740AD530e5c664fd0Ffe` (Sepolia).
+
+**v3 surface highlights vs v2:**
+- `initialize(treasury, ciRelayer, owner, identityReg, reputationReg)` - replaces constructor
+- `postBounty(token, bountyType, ...)` - same shape as v2 but `bountyType` 0-10 canonical
+- `postDirectHire(token, targetWorker, bountyType, ...)` - forces `maxSlots=1`, `ciRequired=false`
+- `submitDeliverable(bountyId, deliverableUrl, deliverableHash, metadata)` - replaces `submitPR`; accepts GitHub PR, Gist, IPFS, Arweave
+- `attestCI(bountyId, worker, passed)` - same interface
+- `withdrawEarnings(IERC20 token)` - same per-token pull
+- `configureTaskType(uint8 typeId, TypeConfig config)` - NEW: owner registers task types
+- `getTaskTypeConfig(uint8 typeId)` - NEW: `(bool enabled, bool ciSupported, bool disclaimerRequired, uint8 minReviewers)`
+- `getStatsV3(token)` - extends `getStats` with `uint256[11] countByType`
+- `settleStake(bountyId, worker)` - same permissionless pull pattern
+- `upgradeToAndCall(address impl, bytes data)` - UUPS upgrade, onlyOwner (Safe multisig)
+- Errors: all v2 errors plus `TaskTypeNotEnabled`, new event `DeliverableSubmitted` replaces `PRSubmitted`
+
+Task type IDs: `0=Code 1=DataAnalysis 2=Research 3=Content 4=DocReview 5=CodeAudit 6=Translation 7=Education 8=Legal 9=Finance 10=Custom`. Types 8+9 have `disclaimerRequired=true`. Full spec: `docs/v3-task-catalog.md`.
+
+### v2 ABI surface (legacy, code bounties only)
+
+All downstream tooling (worker CLI, frontend, relayer, SDK) targets the v2 ABI live at mainnet `0x1362d8…E423` (and Sepolia `0xC478e3…911F` for dev).
+
+**v2 surface highlights:**
+- `constructor(treasury, ciRelayer, owner, identityRegistry, reputationRegistry)`
+- `postBounty(IERC20 token, ...)` - token as first arg
+- `postDirectHire(token, targetWorker, ..., stake, deadline)` - forces `maxSlots=1`, `ciRequired=false`
+- `withdrawEarnings(IERC20 token)` - per-token pull
+- `earnings(addr, token)`, `getStats(token)`, `totalBountyVolume(token)`, `totalProtocolRevenue(token)` - per-token reads
+- `allowToken(token, minBounty)` (onlyOwner, one-way) + `setMinBounty(token, amount)`
+- `Bounty` struct carries `token` + `targetWorker` (4 fixed slots, reordered for packing)
+- `BountyPosted`, `EarningsWithdrawn`, `ProtocolRevenueAccrued` events all carry `token` (indexed)
+- Errors: `TokenNotAllowed`, `TokenAlreadyAllowed`, `NotTargetedWorker`, `InvalidStake`, `NoAgentIdentity`, `CannotRescueEscrowToken`
+
+Owner-only mainnet actions must go through the Safe at <https://app.safe.global/home?safe=celo:0xe9Fc48f315fD4E989637fAcC29AaF2717E19f7F0>, not from a CLI key.
+
+**Revenue surface for Talent Protocol Trust MRR:** treasury accrual is read via `totalProtocolRevenue(token)` per-token plus the indexed `ProtocolRevenueAccrued(token, amount, cumulative)` event. Dashboard at `/revenue` and submission docs at `docs/revenue/` are the canonical references - keep them in sync with mainnet treasury whenever a new bounty resolves. SDK helpers: `getProtocolRevenue` (read) + `listProtocolRevenueEvents` (event log scan).
+
+## Critical timeline
+
+- Day 0 (2026-05-14): admin setup + `ClaudelanceCore` v1 deploy (later superseded) + 67 unit / 4 invariant / 28 fork tests + Sepolia v2 deploy
+- Day 0 late (2026-05-14): **v2 pivot - multi-token + ERC-8004 + direct hire**; v2 deployed to Sepolia; types + sdk bumped to 0.2.0; 83 tests
+- Day 1 (2026-05-15): **mainnet v2 deploy** `0x1362d8…E423`, Safe `allowToken` applied for cUSD/CELO/USDC, first mainnet bounty resolved (SDK 0.3.0 fix), types/sdk republished as 0.3.0
+- Day 4: publish `@yeheskieltame/claudelance-worker`
+- Day 6: Vercel deploy
+- Day 7 (2026-05-21): submission deadline - KarmaGAP + 15 seed bounties + 4-min demo video + pitch deck + Talent Protocol submit
+- Day 8-15: sustained activity, onboard workers, publish remaining 4 npm packages
+- **2026-06-04:** v3 expansion - ClaudelanceCoreV3 deployed to Sepolia + Mainnet (UUPS proxy, 10 task types, EIP-7201 storage, 144 tests, security review cleared); cUSD/CELO/USDC whitelisted via Safe multisig; fork tests against live Sepolia (38/38 pass)
+- **2026-06-12:** first MiniPay-poster lifecycles - operator posts direct-hire bounties from a MiniPay wallet (`0x23E81d…e298`) through the live web form instead of the deployer CLI; bounty #57 onward. Validates the full poster UX on mainnet (approve + post + pickWinner in MiniPay) including one accidental open-mode + CI-gated round (#58) closed via relayer attestCI. Still operator dogfood: the poster wallet is operator-controlled.
+- Day 29 (2026-05-29): hackathon ends
