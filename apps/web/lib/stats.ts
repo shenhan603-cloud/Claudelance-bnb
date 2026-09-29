@@ -1,13 +1,13 @@
 import { createPublicClient, formatUnits, http } from "viem";
 
 import { CLAUDELANCE_CORE_V3_ABI } from "@yeheskieltame/claudelance-types";
-import { DEFAULT_CHAIN_ID, chainById } from "./chain";
+import { DEFAULT_CHAIN_ID, chainById, isBscChain, publicClientFor } from "./chain";
 import { getDeployment } from "./contracts";
 
 // On-chain constants.
 const PROTOCOL_FEE_BPS = 200n; // 2%
 const RESOLUTION_GRACE_PERIOD_SECONDS = 259_200n; // 3 days
-import { getCeloUsdPrice, tokenToCeloWei } from "./price";
+import { getCeloUsdPrice, getNativeUsdPrice, tokenToCeloWei } from "./price";
 
 export type LiveStats = {
   bountyCount: bigint;
@@ -34,6 +34,8 @@ export type LiveStats = {
 
 const rpcOverrides: Partial<Record<number, string>> = {
   42_220: process.env.NEXT_PUBLIC_CELO_MAINNET_RPC,
+  56: process.env.NEXT_PUBLIC_BSC_RPC_URL,
+  97: process.env.NEXT_PUBLIC_BSC_TESTNET_RPC_URL,
 };
 
 export async function fetchLiveStats(chainId: number = DEFAULT_CHAIN_ID): Promise<LiveStats> {
@@ -79,17 +81,25 @@ export async function fetchLiveStats(chainId: number = DEFAULT_CHAIN_ID): Promis
   const feeBps = PROTOCOL_FEE_BPS;
   const graceSeconds = RESOLUTION_GRACE_PERIOD_SECONDS;
 
-  const celoUsdPrice = await getCeloUsdPrice();
-  const cusdInCelo = tokenToCeloWei(volCusd, 18, 1, celoUsdPrice);
-  const usdcInCelo = tokenToCeloWei(volUsdc, 6, 1, celoUsdPrice);
+  const onBsc = isBscChain(chainId);
+  // Celo: stables at $1, CELO at the live rate. BSC: USDT/USDC at $1 (18 dec),
+  // WBNB at the live BNB rate. `totalVolumeInCelo` carries native-denominated
+  // volume (CELO on Celo, BNB on BSC) so the display reads "in native gas token".
+  const nativeUsdPrice = onBsc ? await getNativeUsdPrice("binancecoin") : await getCeloUsdPrice();
+  const celoUsdPrice = nativeUsdPrice;
+  // On BSC every slot is 18 decimals; on Celo USDC is 6.
+  const usdcDecimals = onBsc ? 18 : 6;
+  const nativeDecimals = 18;
+  const cusdInCelo = tokenToCeloWei(volCusd, 18, 1, nativeUsdPrice);
+  const usdcInCelo = tokenToCeloWei(volUsdc, usdcDecimals, 1, nativeUsdPrice);
   const totalVolumeInCelo = volCelo + cusdInCelo + usdcInCelo;
 
-  // USD straight from the per-token on-chain volumes: CELO at the live rate,
-  // cUSD + USDC at their $1 peg.
+  // USD straight from the per-token on-chain volumes: native token at the live
+  // rate, stables at their $1 peg.
   const totalVolumeUsd =
-    Number(formatUnits(volCelo, 18)) * celoUsdPrice +
+    Number(formatUnits(volCelo, nativeDecimals)) * nativeUsdPrice +
     Number(formatUnits(volCusd, 18)) +
-    Number(formatUnits(volUsdc, 6));
+    Number(formatUnits(volUsdc, usdcDecimals));
 
   return {
     bountyCount,

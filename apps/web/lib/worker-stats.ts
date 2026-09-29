@@ -1,9 +1,9 @@
 import "server-only";
 
-import { createPublicClient, http, type Address } from "viem";
+import { type Address } from "viem";
 import { CLAUDELANCE_CORE_V3_ABI, MAINNET_V3 } from "@yeheskieltame/claudelance-types";
 
-import { celoMainnet, DEFAULT_CHAIN_ID } from "@/lib/chain";
+import { DEFAULT_CHAIN_ID, publicClientFor } from "@/lib/chain";
 import { getDeployment } from "@/lib/contracts";
 
 export type TokenEarnings = {
@@ -18,6 +18,8 @@ export type WorkerStats = {
 
 // v3 mainnet proxy deploy block (2026-06-04). Lower bound for the log scan.
 const V3_DEPLOY_BLOCK = 68_536_240n;
+// BSC testnet v3 proxy deploy block (2026-09-25, bsc-testnet.json deployedAt).
+const BSC_TESTNET_V3_DEPLOY_BLOCK = 132_984_885n;
 
 const TOKENS = [
   { symbol: "cUSD" as const, token: MAINNET_V3.tokens.cUSD as Address },
@@ -35,15 +37,18 @@ const TOKENS = [
  *     - sum(EarningsWithdrawn.amount where worker = worker, by token)
  * The on-chain withdraw is the source of truth; this is the display estimate.
  */
-export async function fetchWorkerStats(worker: Address): Promise<WorkerStats> {
-  const deployment = getDeployment(DEFAULT_CHAIN_ID);
+export async function fetchWorkerStats(worker: Address, chainId: number = DEFAULT_CHAIN_ID): Promise<WorkerStats> {
+  const deployment = getDeployment(chainId);
   const core = deployment.core as Address;
-  const client = createPublicClient({
-    chain: celoMainnet,
-    transport: http(process.env.NEXT_PUBLIC_CELO_MAINNET_RPC),
-  });
+  const client = publicClientFor(chainId);
+  const fromBlock = chainId === 97 ? BSC_TESTNET_V3_DEPLOY_BLOCK : V3_DEPLOY_BLOCK;
+  const tokens = [
+    { symbol: "cUSD" as const, token: deployment.tokens.cUSD as Address },
+    { symbol: "CELO" as const, token: deployment.tokens.CELO as Address },
+    { symbol: "USDC" as const, token: deployment.tokens.USDC as Address },
+  ];
 
-  const balances = new Map<string, bigint>(TOKENS.map((t) => [t.token.toLowerCase(), 0n]));
+  const balances = new Map<string, bigint>(tokens.map((t) => [t.token.toLowerCase(), 0n]));
   const credit = (tokenAddr: string | undefined, delta: bigint) => {
     if (!tokenAddr) return;
     const key = tokenAddr.toLowerCase();
@@ -54,15 +59,15 @@ export async function fetchWorkerStats(worker: Address): Promise<WorkerStats> {
     const [resolved, withdrawn, settled] = await Promise.all([
       client.getContractEvents({
         address: core, abi: CLAUDELANCE_CORE_V3_ABI, eventName: "BountyResolved",
-        args: { winner: worker }, fromBlock: V3_DEPLOY_BLOCK,
+        args: { winner: worker }, fromBlock: fromBlock,
       }),
       client.getContractEvents({
         address: core, abi: CLAUDELANCE_CORE_V3_ABI, eventName: "EarningsWithdrawn",
-        args: { worker }, fromBlock: V3_DEPLOY_BLOCK,
+        args: { worker }, fromBlock: fromBlock,
       }),
       client.getContractEvents({
         address: core, abi: CLAUDELANCE_CORE_V3_ABI, eventName: "StakeSettled",
-        args: { worker }, fromBlock: V3_DEPLOY_BLOCK,
+        args: { worker }, fromBlock: fromBlock,
       }),
     ]);
 
@@ -96,7 +101,7 @@ export async function fetchWorkerStats(worker: Address): Promise<WorkerStats> {
     // Log scan failed; fall back to zeros so the page still renders.
   }
 
-  const earnings: TokenEarnings[] = TOKENS.map((t) => {
+  const earnings: TokenEarnings[] = tokens.map((t) => {
     const v = balances.get(t.token.toLowerCase()) ?? 0n;
     return { ...t, amount: v > 0n ? v : 0n };
   });

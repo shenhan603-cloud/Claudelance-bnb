@@ -1,9 +1,9 @@
 import "server-only";
 
-import { createPublicClient, http, parseAbi, type Address } from "viem";
+import { parseAbi, type Address } from "viem";
 import { MAINNET } from "@yeheskieltame/claudelance-types";
 
-import { celoMainnet } from "@/lib/chain";
+import { DEFAULT_CHAIN_ID, publicClientFor } from "@/lib/chain";
 import { getDeployment } from "@/lib/contracts";
 
 const bountyResolvedEvent = parseAbi([
@@ -41,13 +41,11 @@ const getBountyAbi = [
   },
 ] as const;
 
-const rpcOverride = process.env.NEXT_PUBLIC_CELO_MAINNET_RPC;
-
 /** ~14 days at Celo's L2 1s blocktime. The feed only renders the latest
  *  `limit` wins (sorted by block), so the window just bounds how far back we
  *  look to find them - wide enough that the hero ticker isn't blanked by a
  *  multi-day quiet stretch. Truly empty history falls back to the terminal's
- *  "listening" state. */
+ *  "listening" state. BSC runs ~3s blocks; the window is a bound, not a rule. */
 const RECENT_WINDOW_BLOCKS = 1_200_000n;
 
 function resolveTokenMeta(address: Address): { symbol: string; decimals: number } {
@@ -55,6 +53,8 @@ function resolveTokenMeta(address: Address): { symbol: string; decimals: number 
   if (a === MAINNET.tokens.USDC.toLowerCase()) return { symbol: "USDC", decimals: 6 };
   if (a === MAINNET.tokens.cUSD.toLowerCase()) return { symbol: "cUSD", decimals: 18 };
   if (a === MAINNET.tokens.CELO.toLowerCase()) return { symbol: "CELO", decimals: 18 };
+  // BSC slots: USDT/WBNB/USDC (all 18 decimals) fall through to cUSD-style
+  // defaults here; symbol is corrected by the caller via tokenSymbols.
   return { symbol: "cUSD", decimals: 18 };
 }
 
@@ -69,9 +69,12 @@ export type ResolvedBountyLog = {
   tokenDecimals: number;
 };
 
-export async function fetchRecentResolved(limit = 5): Promise<ResolvedBountyLog[]> {
-  const client = createPublicClient({ chain: celoMainnet, transport: http(rpcOverride) });
-  const deploy = getDeployment(celoMainnet.id);
+export async function fetchRecentResolved(
+  limit = 5,
+  chainId: number = DEFAULT_CHAIN_ID,
+): Promise<ResolvedBountyLog[]> {
+  const client = publicClientFor(chainId);
+  const deploy = getDeployment(chainId);
 
   const latest = await client.getBlockNumber();
   const fromBlock =

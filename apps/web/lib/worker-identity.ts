@@ -1,13 +1,11 @@
 import "server-only";
 
-import { createPublicClient, http, parseAbi, type Address } from "viem";
-import { MAINNET } from "@yeheskieltame/claudelance-types";
+import { parseAbi, type Address } from "viem";
 
-import { celoMainnet } from "@/lib/chain";
+import { DEFAULT_CHAIN_ID, publicClientFor } from "@/lib/chain";
 import { agentIdFor } from "@/lib/agent-ids";
+import { getDeployment } from "@/lib/contracts";
 
-const IDENTITY_REGISTRY = MAINNET.identityRegistry as Address;
-const REPUTATION_REGISTRY = MAINNET.reputationRegistry as Address;
 const identityAbi = parseAbi(["function balanceOf(address owner) view returns (uint256)"]);
 const reputationAbi = parseAbi([
   "function getClients(uint256 agentId) view returns (address[])",
@@ -28,11 +26,14 @@ export type WorkerIdentity = {
  * gate the Core enforces on `claimSlot` (NoAgentIdentity) - plus its agent id
  * and on-chain reputation (feedback count) when known.
  */
-export async function fetchWorkerIdentity(worker: Address): Promise<WorkerIdentity> {
-  const client = createPublicClient({
-    chain: celoMainnet,
-    transport: http(process.env.NEXT_PUBLIC_CELO_MAINNET_RPC),
-  });
+export async function fetchWorkerIdentity(
+  worker: Address,
+  chainId: number = DEFAULT_CHAIN_ID,
+): Promise<WorkerIdentity> {
+  const deployment = getDeployment(chainId);
+  const IDENTITY_REGISTRY = deployment.identityRegistry as Address;
+  const REPUTATION_REGISTRY = deployment.reputationRegistry as Address;
+  const client = publicClientFor(chainId);
   const agentId = agentIdFor(worker);
 
   let hasIdentity = false;

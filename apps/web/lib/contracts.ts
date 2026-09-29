@@ -1,4 +1,5 @@
 import {
+  BSC_TESTNET_V3,
   CLAUDELANCE_CORE_V3_ABI,
   MAINNET_V3,
   type Deployment,
@@ -18,14 +19,23 @@ function flatten(d: Deployment) {
     treasury: d.treasury,
     ciRelayer: d.ciRelayer,
     owner: d.owner,
+    identityRegistry: d.identityRegistry,
+    reputationRegistry: d.reputationRegistry,
+    tokenSymbols: d.tokenSymbols,
+    tokenDecimals: d.tokenDecimals,
+    nativeSymbol: d.nativeSymbol,
+    explorerBaseUrl: d.explorerBaseUrl,
   };
 }
 
 export const deployments = {
   [MAINNET_V3.chainId]: flatten(MAINNET_V3),
+  [BSC_TESTNET_V3.chainId]: flatten(BSC_TESTNET_V3),
 } as const;
 
-export function getDeployment(chainId: number) {
+export type FlattenedDeployment = (typeof deployments)[keyof typeof deployments];
+
+export function getDeployment(chainId: number): FlattenedDeployment {
   const entry = deployments[chainId as keyof typeof deployments];
   if (!entry) throw new Error(`No Claudelance deployment for chain ${chainId}`);
   return entry;

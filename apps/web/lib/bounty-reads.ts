@@ -1,9 +1,10 @@
 import "server-only";
 
-import { createPublicClient, http, type Address } from "viem";
+import { type Address } from "viem";
 import { BountyStatus, MAINNET_V3, type Deployment } from "@yeheskieltame/claudelance-types";
 
-import { celoMainnet } from "@/lib/chain";
+import { DEFAULT_CHAIN_ID, publicClientFor } from "@/lib/chain";
+import { getDeployment } from "@/lib/contracts";
 
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -109,15 +110,17 @@ export type BountyDetailJson = BountyJson & {
   submissions: SubmissionJson[];
 };
 
-export function getActiveDeployment(): Deployment {
+export function getActiveDeployment(chainId: number = DEFAULT_CHAIN_ID): Deployment {
+  // BSC chains resolve through lib/contracts#getDeployment; MAINNET_V3 stays
+  // the Celo default so existing call sites are unchanged.
+  if (chainId !== MAINNET_V3.chainId) {
+    return getDeployment(chainId) as unknown as Deployment;
+  }
   return MAINNET_V3;
 }
 
-function corePublicClient() {
-  return createPublicClient({
-    chain: celoMainnet,
-    transport: http(process.env.NEXT_PUBLIC_CELO_MAINNET_RPC),
-  });
+function corePublicClient(chainId: number = DEFAULT_CHAIN_ID) {
+  return publicClientFor(chainId);
 }
 
 export function toJsonBounty(id: bigint, bounty: ChainBounty) {
@@ -230,9 +233,11 @@ export async function readBountyPage(options: {
   token?: TokenFilter;
   limit: number;
   cursor?: bigint;
+  chainId?: number;
 }): Promise<{ items: BountyJson[]; nextCursor: string | null }> {
-  const deployment = getActiveDeployment();
-  const client = corePublicClient();
+  const chainId = options.chainId ?? DEFAULT_CHAIN_ID;
+  const deployment = getActiveDeployment(chainId);
+  const client = corePublicClient(chainId);
 
   const items: BountyJson[] = [];
   let nextId = options.cursor ?? 1n;
@@ -290,9 +295,12 @@ export async function readBountyPage(options: {
   return { items, nextCursor: hasMore ? nextId.toString() : null };
 }
 
-export async function readBountyDetail(bountyId: bigint): Promise<BountyDetailJson | null> {
-  const deployment = getActiveDeployment();
-  const client = corePublicClient();
+export async function readBountyDetail(
+  bountyId: bigint,
+  chainId: number = DEFAULT_CHAIN_ID,
+): Promise<BountyDetailJson | null> {
+  const deployment = getActiveDeployment(chainId);
+  const client = corePublicClient(chainId);
 
   const [bountyResult, claimersResult] = await client.multicall({
     allowFailure: false,

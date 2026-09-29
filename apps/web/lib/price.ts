@@ -1,24 +1,37 @@
-// Only used if the live CoinGecko fetch fails; kept near the current CELO spot
-// so a price-API outage can't grossly distort the displayed USD.
-const CELO_USD_FALLBACK = 0.08;
-
 type CoingeckoResponse = {
   celo?: { usd?: number };
 };
-
 export async function getCeloUsdPrice(): Promise<number> {
+  return getNativeUsdPrice("celo");
+}
+
+const NATIVE_USD_FALLBACKS: Record<string, number> = {
+  celo: 0.08,
+  binancecoin: 600,
+};
+
+/**
+ * USD spot price for a native gas token via CoinGecko simple price.
+ * Coingecko ids: "celo" (Celo), "binancecoin" (BNB on BSC).
+ * Falls back to a near-current constant on API outage so a price failure
+ * can't grossly distort the displayed USD.
+ */
+export async function getNativeUsdPrice(coingeckoId: "celo" | "binancecoin"): Promise<number> {
   try {
-    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=celo&vs_currencies=usd", {
-      headers: { accept: "application/json" },
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) return CELO_USD_FALLBACK;
-    const data: CoingeckoResponse = await res.json();
-    const usd = data.celo?.usd;
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoId}&vs_currencies=usd`,
+      {
+        headers: { accept: "application/json" },
+        next: { revalidate: 300 },
+      },
+    );
+    if (!res.ok) return NATIVE_USD_FALLBACKS[coingeckoId] ?? 0;
+    const data = (await res.json()) as Record<string, { usd?: number }>;
+    const usd = data[coingeckoId]?.usd;
     if (typeof usd === "number" && usd > 0) return usd;
-    return CELO_USD_FALLBACK;
+    return NATIVE_USD_FALLBACKS[coingeckoId] ?? 0;
   } catch {
-    return CELO_USD_FALLBACK;
+    return NATIVE_USD_FALLBACKS[coingeckoId] ?? 0;
   }
 }
 

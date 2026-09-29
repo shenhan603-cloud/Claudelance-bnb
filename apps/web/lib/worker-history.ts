@@ -1,11 +1,9 @@
 import "server-only";
 
-import { createPublicClient, http, zeroAddress, type Address } from "viem";
+import { zeroAddress, type Address } from "viem";
 
-import { celoMainnet } from "@/lib/chain";
+import { DEFAULT_CHAIN_ID, publicClientFor } from "@/lib/chain";
 import { getDeployment } from "@/lib/contracts";
-
-const rpcOverride = process.env.NEXT_PUBLIC_CELO_MAINNET_RPC;
 
 /** BountyStatus.Resolved (Open=0, Resolved=1, ...). */
 const STATUS_RESOLVED = 1;
@@ -61,9 +59,12 @@ function netPayout(amount: bigint): bigint {
  * getLogs window over the full history is rejected by most RPCs, which is why
  * the per-worker history used to come back empty.
  */
-export async function fetchWorkerHistory(worker: Address): Promise<WorkerHistoryRow[]> {
-  const client = createPublicClient({ chain: celoMainnet, transport: http(rpcOverride) });
-  const core = getDeployment(celoMainnet.id).core as Address;
+export async function fetchWorkerHistory(
+  worker: Address,
+  chainId: number = DEFAULT_CHAIN_ID,
+): Promise<WorkerHistoryRow[]> {
+  const client = publicClientFor(chainId);
+  const core = getDeployment(chainId).core as Address;
   const target = worker.toLowerCase();
 
   const BATCH = 50;
