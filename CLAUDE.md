@@ -97,6 +97,13 @@ Supplementary repos under `github.com/yeheskieltame/`: `bounties-registry` (Phas
   - Sepolia Reputation: `0x8004B663056A597Dffe9eCcC1965A193B7388713`
 - Faucet: https://faucet.celo.org/celo-sepolia
 
+### BNB Chain (multichain expansion - additive, Celo stays default/prod)
+
+- BSC Mainnet 56 (`https://bsc-dataseed.bnbchain.org`, bscscan.com) / BSC Testnet 97 (`https://data-seed-prebsc-1-s1.bnbchain.org:8545`, testnet.bscscan.com, faucet https://www.bnbchain.org/en/testnet-faucet)
+- Token slots keep their Celo keys (`cUSD`/`CELO`/`USDC`) but hold USDT / WBNB / USDC on BSC - all 18 decimals. Display via `Deployment.tokenSymbols` / SDK `NETWORK_META`.
+- ERC-8004 on BSC: same reference CREATE2 addresses as Celo (mainnet `0x8004A169...` / `0x8004BAa1...`, testnet `0x8004A818...` / `0x8004B663...`), bytecode confirmed on-chain.
+- BSC testnet (97) core proxy `0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5` is live (`BSC_TESTNET_V3`, `live: true`). BSC mainnet NOT deployed yet: `BSC_MAINNET_V3` has `core = 0x0`, `live: false`. SDK needs `coreAddress` (or `CLAUDELANCE_CORE_ADDRESS`); relayer needs `CORE_ADDRESS` + `EVENTS_FROM_BLOCK` + `IDENTITY_EVENTS_FROM_BLOCK`.
+
 ## Smart contract surface (`ClaudelanceCore.sol` v2)
 
 Single contract - `ReentrancyGuard + Ownable2Step + Pausable`. Public mutating fns:
