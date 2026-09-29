@@ -1,0 +1,34 @@
+{
+  "chainId": 42220,
+  "v2": {
+    "core": "0x1362d874F40B7e28836cBeCcA14f5EfBe6c6E423",
+    "deployedAt": 1778828074,
+    "celoscan": "https://celoscan.io/address/0x1362d874F40B7e28836cBeCcA14f5EfBe6c6E423#code"
+  },
+  "v3": {
+    "proxy": "0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8",
+    "implementation": "0x92b7d04E9A3fa3C96bfc891D8E8dB61Fe6C1D49C",
+    "deployedAt": 1780589936,
+    "tokensWhitelisted": true,
+    "celoscanProxy": "https://celoscan.io/address/0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8#code",
+    "celoscanImpl": "https://celoscan.io/address/0x92b7d04E9A3fa3C96bfc891D8E8dB61Fe6C1D49C#code",
+    "v31": {
+      "implementation": "0x01A7Ee90F121Bd57BD1059f5B347C98e37aAaea7",
+      "deployedAt": 1781031177,
+      "status": "implementation deployed + verified; proxy upgrade pending Safe execution",
+      "upgradeCalldata": "0x4f1ef28600000000000000000000000001a7ee90f121bd57bd1059f5b347c98e37aaaea700000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+      "celoscanImpl": "https://celoscan.io/address/0x01A7Ee90F121Bd57BD1059f5B347C98e37aAaea7#code"
+    }
+  },
+  "tokens": {
+    "cUSD": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    "CELO": "0x471EcE3750Da237f93B8E339c536989b8978a438",
+    "USDC": "0xcebA9300f2b948710d2653dD7B07f33A8B32118C"
+  },
+  "identityRegistry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+  "reputationRegistry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
+  "treasury": "0xCC0cCac212999612BdDdEb607B33CC1a46F8A401",
+  "ciRelayer": "0x1fEDda23c2945D59f3929e6C463cF685aC077ad5",
+  "owner": "0xe9Fc48f315fD4E989637fAcC29AaF2717E19f7F0",
+  "deployer": "0x77c4a1cD22005b67Eb9CcEaE7E9577188d7Bca82"
+}
