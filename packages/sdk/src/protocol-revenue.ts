@@ -9,7 +9,7 @@ import { CLAUDELANCE_CORE_V3_ABI } from "@yeheskieltame/claudelance-types";
  * the cumulative revenue as the second element.
  *
  * Revenue is denominated in the token's smallest unit (wei for cUSD/CELO,
- * 1e-6 for USDC). Each resolved bounty contributes 2% of its amount, plus
+ * 1e-6 for Celo USDC; every BNB Chain token is 18 decimals). Each resolved bounty contributes 2% of its amount, plus
  * any forfeited stakes.
  */
 export async function getProtocolRevenue(

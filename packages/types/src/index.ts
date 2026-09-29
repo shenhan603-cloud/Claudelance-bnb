@@ -10,6 +10,10 @@ export {
   MAINNET,
   MAINNET_V3,
   deploymentByChainId,
+  BSC_MAINNET_V3,
+  BSC_TESTNET_V3,
+  DEPLOYMENTS,
+  SUPPORTED_CHAIN_IDS,
   type Deployment,
   type TokenSet,
 } from './deployments.js';

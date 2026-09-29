@@ -19,7 +19,9 @@
     "task-management",
     "ai-agent",
     "mcp",
-    "celo"
+    "celo",
+    "bnb-chain",
+    "bsc"
   ],
   "type": "module",
   "main": "./dist/index.cjs",

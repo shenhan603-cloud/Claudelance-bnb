@@ -14,7 +14,6 @@ import { mnemonicToAccount, privateKeyToAccount } from 'viem/accounts';
 
 import {
   CLAUDELANCE_CORE_V3_ABI,
-  MAINNET,
   type Bounty,
   type Deployment,
   type Submission,
@@ -22,7 +21,7 @@ import {
   type TypeConfig,
 } from '@yeheskieltame/claudelance-types';
 
-import { chainForNetwork, type NetworkKey } from './chain.js';
+import { chainForNetwork, deploymentForNetwork, type NetworkKey } from './chain.js';
 import { buildTransport } from './transport.js';
 import { CUSD_ABI } from './cusd-abi.js';
 import {
@@ -61,6 +60,8 @@ export type FromPrivateKeyOptions = {
   rpcUrl?: string;
   /** Several RPC endpoints for fallback redundancy at production scale. */
   rpcUrls?: string[];
+  /** Override the core proxy address (e.g. a fresh BNB Chain deploy). */
+  coreAddress?: `0x${string}`;
 };
 
 /** Inputs accepted by {@link ClaudelanceClient.fromMnemonic}. */
@@ -72,6 +73,8 @@ export type FromMnemonicOptions = {
   rpcUrl?: string;
   /** Several RPC endpoints for fallback redundancy at production scale. */
   rpcUrls?: string[];
+  /** Override the core proxy address (e.g. a fresh BNB Chain deploy). */
+  coreAddress?: `0x${string}`;
   /**
    * BIP-44 derivation path. Defaults to `m/44'/60'/0'/0/0` - the Ethereum
    * standard for the first account / first address, which matches what
@@ -195,7 +198,8 @@ export class ClaudelanceClient {
   }
 
   /**
-   * Gas overrides for all Celo write transactions.
+   * Gas overrides for all write transactions (Celo, and BNB Chain where a
+   * legacy gasPrice tx is the norm anyway).
    *
    * On Celo, CELO is simultaneously the native gas token and the ERC20 used
    * for bounty escrow. EIP-1559 reserves `gasLimit x maxFeePerGas` from the
@@ -227,10 +231,10 @@ export class ClaudelanceClient {
    * Convenience: build a fully-wired client from a private key + network
    * key. Resolves the canonical addresses from `@yeheskieltame/claudelance-types`.
    *
-   * Mainnet only: pass `'celo'` (or its alias `'mainnet'`).
+   * Networks: `'celo'` (alias `'mainnet'`, default), `'bsc'`, `'bscTestnet'`.
    */
   static fromPrivateKey(opts: FromPrivateKeyOptions): ClaudelanceClient {
-    const deployment: Deployment = MAINNET;
+    const deployment: Deployment = deploymentForNetwork(opts.network, opts.coreAddress);
     const chain = chainForNetwork(opts.network);
     const account = privateKeyToAccount(opts.privateKey);
     const transport = buildTransport(opts);
@@ -253,8 +257,13 @@ export class ClaudelanceClient {
    * No private key required, only read methods are available.
    * Write methods throw `[ClaudelanceClient] Write methods require a wallet client`.
    */
-  static fromRpcUrl(opts: { rpcUrl?: string; rpcUrls?: string[]; network: NetworkKey }): ClaudelanceClient {
-    const deployment: Deployment = MAINNET;
+  static fromRpcUrl(opts: {
+    rpcUrl?: string;
+    rpcUrls?: string[];
+    network: NetworkKey;
+    coreAddress?: `0x${string}`;
+  }): ClaudelanceClient {
+    const deployment: Deployment = deploymentForNetwork(opts.network, opts.coreAddress);
     const chain = chainForNetwork(opts.network);
     const transport = buildTransport(opts);
     const publicClient = createPublicClient({ chain, transport });
@@ -277,10 +286,10 @@ export class ClaudelanceClient {
    * account / first address). Override `derivationPath` to use a
    * different index, e.g. `m/44'/60'/0'/0/1` for the second address.
    *
-   * Mainnet only: pass `'celo'` (or its alias `'mainnet'`).
+   * Networks: `'celo'` (alias `'mainnet'`, default), `'bsc'`, `'bscTestnet'`.
    */
   static fromMnemonic(opts: FromMnemonicOptions): ClaudelanceClient {
-    const deployment: Deployment = MAINNET;
+    const deployment: Deployment = deploymentForNetwork(opts.network, opts.coreAddress);
     const chain = chainForNetwork(opts.network);
     const account = mnemonicToAccount(opts.mnemonic, {
       path: opts.derivationPath ?? "m/44'/60'/0'/0/0",
@@ -309,7 +318,8 @@ export class ClaudelanceClient {
    * - key:     `CLAUDELANCE_PRIVATE_KEY` | `PRIVATE_KEY` (omit → read-only client)
    * - network: `CLAUDELANCE_NETWORK` | `NETWORK` (default `celo`)
    * - rpc:     `CLAUDELANCE_RPC_URLS` (comma-separated, multi-RPC fallback)
-   *            | `CLAUDELANCE_RPC_URL` | `CELO_RPC_URL` (single)
+   *            | `CLAUDELANCE_RPC_URL` | `CELO_RPC_URL` | `BSC_RPC_URL` (single)
+   * - core:    `CLAUDELANCE_CORE_ADDRESS` (optional proxy override, e.g. BNB Chain)
    *
    * Pass `env` to read from an explicit record; defaults to `process.env`
    * when available (Node / edge), else an empty object (browser).
@@ -320,13 +330,14 @@ export class ClaudelanceClient {
     const rpcUrls = rpcCsv
       ? rpcCsv.split(',').map((s) => s.trim()).filter(Boolean)
       : undefined;
-    const rpcUrl = env.CLAUDELANCE_RPC_URL ?? env.CELO_RPC_URL;
+    const rpcUrl = env.CLAUDELANCE_RPC_URL ?? env.CELO_RPC_URL ?? env.BSC_RPC_URL;
+    const coreAddress = env.CLAUDELANCE_CORE_ADDRESS as `0x${string}` | undefined;
     const privateKey = (env.CLAUDELANCE_PRIVATE_KEY ?? env.PRIVATE_KEY) as `0x${string}` | undefined;
 
     if (privateKey) {
-      return ClaudelanceClient.fromPrivateKey({ privateKey, network, rpcUrl, rpcUrls });
+      return ClaudelanceClient.fromPrivateKey({ privateKey, network, rpcUrl, rpcUrls, coreAddress });
     }
-    return ClaudelanceClient.fromRpcUrl({ network, rpcUrl, rpcUrls });
+    return ClaudelanceClient.fromRpcUrl({ network, rpcUrl, rpcUrls, coreAddress });
   }
 
   // Read API

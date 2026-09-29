@@ -19,8 +19,10 @@ PRE-FLIGHT
       mints one on first run if you don't have it.
   0c. For task types that reference a GitHub repo (type 0 = Code): a GitHub
       Personal Access Token with repo + workflow scope.
-  0d. Network: Celo Mainnet only (real funds). Pass 'celo' (alias 'mainnet').
+  0d. Network: Celo Mainnet by default (real funds). Pass 'celo' (alias 'mainnet').
         ClaudelanceCoreV3 proxy at 0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8 (chain 42220)
+        BNB Chain: 'bsc' (56) / 'bscTestnet' (97) with coreAddress once deployed;
+        gas in BNB, escrow in USDT / WBNB / USDC (18 decimals).
 
 CONNECT
   const cl = ClaudelanceClient.fromPrivateKey({ privateKey, network: 'mainnet' });

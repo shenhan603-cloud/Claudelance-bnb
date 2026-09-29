@@ -1,5 +1,7 @@
 /**
- * Live Claudelance deployment records. Celo mainnet only (chain 42220).
+ * Live Claudelance deployment records. Celo mainnet (chain 42220) is the live,
+ * default production deployment. BNB Chain entries (BSC mainnet 56 / BSC
+ * testnet 97) are the multichain expansion - see the bottom of this file.
  *
  * Source of truth lives in `contracts/deployments/celo-mainnet.json`
  * within the monorepo; this module mirrors those records for npm consumers.
@@ -7,6 +9,12 @@
  * UUPS upgradeable proxy, 10 task types, submitDeliverable, EIP-7201 storage.
  */
 
+/**
+ * The three whitelisted escrow-token slots. Keys keep their Celo names for
+ * backwards compatibility; on other chains the slots map to
+ * stable / wrapped-native / USDC (on BNB Chain: USDT / WBNB / USDC). Use
+ * `Deployment.tokenSymbols` / `tokenDecimals` for display.
+ */
 export type TokenSet = {
   /** Celo Dollar stablecoin. */
   cUSD: `0x${string}`;
@@ -41,6 +49,16 @@ export type Deployment = {
   ciRelayer: `0x${string}`;
   /** Explorer URL for the core contract (verified source page). */
   explorerUrl: string;
+  /** Display symbol per token slot. Absent = Celo symbols (cUSD / CELO / USDC). */
+  tokenSymbols?: Record<keyof TokenSet, string>;
+  /** Decimals per token slot. Absent = Celo decimals (18 / 18 / 6). */
+  tokenDecimals?: Record<keyof TokenSet, number>;
+  /** Native gas token symbol. Absent = CELO. */
+  nativeSymbol?: string;
+  /** Block explorer base URL. Absent = https://celoscan.io */
+  explorerBaseUrl?: string;
+  /** False when the core proxy has not been deployed on this chain yet. */
+  live?: boolean;
 };
 
 // ─── v3 (UUPS proxy, 10 task types) ──────────────────────────────────────────
@@ -69,8 +87,77 @@ export const MAINNET_V3: Deployment = {
 /** Default Celo Mainnet deployment (v3 proxy). */
 export const MAINNET: Deployment = MAINNET_V3;
 
-/** Look up the deployment by chain id. Mainnet only (chain 42220). */
+// ─── BNB Chain (multichain expansion) ────────────────────────────────────────
+//
+// BSC testnet (97): ClaudelanceCore v3 deployed 2026-09-25 (mirrors
+// contracts/deployments/bsc-testnet.json). TODO(bnb): BSC mainnet (56) is NOT
+// deployed yet - `core` stays the zero address (`live: false`) there.
+// Token slots: cUSD -> USDT, CELO -> WBNB, USDC -> USDC (all 18 decimals on BSC).
+// ERC-8004 registries: reference CREATE2 deployments, bytecode confirmed on-chain.
+
+const ZERO = '0x0000000000000000000000000000000000000000' as const;
+
+const BSC_TOKEN_SYMBOLS = { cUSD: 'USDT', CELO: 'WBNB', USDC: 'USDC' } as const;
+const BSC_TOKEN_DECIMALS = { cUSD: 18, CELO: 18, USDC: 18 } as const;
+
+export const BSC_MAINNET_V3: Deployment = {
+  chainId: 56,
+  chainName: 'bsc-mainnet',
+  version: 'v3',
+  core: ZERO, // TODO(bnb): proxy address after deploy
+  tokens: {
+    cUSD: '0x55d398326f99059fF775485246999027B3197955', // USDT (BEP-20, 18 dec)
+    CELO: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', // WBNB
+    USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', // USDC (BEP-20, 18 dec)
+  },
+  identityRegistry: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+  reputationRegistry: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
+  owner: ZERO, // TODO(bnb)
+  treasury: ZERO, // TODO(bnb)
+  ciRelayer: ZERO, // TODO(bnb)
+  explorerUrl: 'https://bscscan.com',
+  tokenSymbols: BSC_TOKEN_SYMBOLS,
+  tokenDecimals: BSC_TOKEN_DECIMALS,
+  nativeSymbol: 'BNB',
+  explorerBaseUrl: 'https://bscscan.com',
+  live: false,
+};
+
+export const BSC_TESTNET_V3: Deployment = {
+  chainId: 97,
+  chainName: 'bsc-testnet',
+  version: 'v3',
+  core: '0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5', // v3 proxy, deployed 2026-09-25 (block 132984885)
+  implementation: '0xEB194356B798b81586B589e294b8b1b989895C63',
+  tokens: {
+    cUSD: '0x9200cABD0190EdC632691d58FB785e3A7272Ed1E', // MockERC20 "USDT" (18 dec) from DeployMocks.s.sol
+    CELO: '0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd', // WBNB (canonical testnet)
+    USDC: '0xb796355023580Fb29f7Be47460A0079B12aFd03e', // MockERC20 "USDC" (18 dec) from DeployMocks.s.sol
+  },
+  identityRegistry: '0x8004A818BFB912233c491871b3d84c89A494BD9e',
+  reputationRegistry: '0x8004B663056A597Dffe9eCcC1965A193B7388713',
+  owner: '0x3F46b654035aA92738FE4dC7dc9538Ca9bA07CEA',
+  treasury: '0x3F46b654035aA92738FE4dC7dc9538Ca9bA07CEA',
+  ciRelayer: '0x860DdD8fb4f4E3cA87854812444C45DcB74cb96e',
+  explorerUrl: 'https://testnet.bscscan.com/address/0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5',
+  tokenSymbols: BSC_TOKEN_SYMBOLS,
+  tokenDecimals: BSC_TOKEN_DECIMALS,
+  nativeSymbol: 'tBNB',
+  explorerBaseUrl: 'https://testnet.bscscan.com',
+  live: true,
+};
+
+/** Every known deployment, keyed by chain id. Celo mainnet first (default). */
+export const DEPLOYMENTS: Record<number, Deployment> = {
+  42220: MAINNET_V3,
+  56: BSC_MAINNET_V3,
+  97: BSC_TESTNET_V3,
+};
+
+/** Supported chain ids: Celo mainnet (default), BSC mainnet, BSC testnet. */
+export const SUPPORTED_CHAIN_IDS = [42220, 56, 97] as const;
+
+/** Look up the deployment by chain id (42220 Celo, 56 BSC, 97 BSC testnet). */
 export function deploymentByChainId(chainId: number): Deployment | undefined {
-  if (chainId === 42220) return MAINNET_V3;
-  return undefined;
+  return DEPLOYMENTS[chainId];
 }

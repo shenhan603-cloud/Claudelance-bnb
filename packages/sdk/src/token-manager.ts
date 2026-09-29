@@ -22,6 +22,7 @@ const ERC20_BALANCE_ABI = [
   },
 ] as const;
 
+/** Token slot keys. On BNB Chain the slots hold USDT / WBNB / USDC (see NETWORK_META). */
 export type TokenKey = 'cUSD' | 'CELO' | 'USDC';
 
 export type TokenAmounts = Record<TokenKey, bigint>;
@@ -44,7 +45,8 @@ export type TokenManagerOptions = {
   /**
    * Starting block for `TokenAllowed`/`MinBountyUpdated` event scans.
    * Defaults to 68_143_824 (a safe Celo-mainnet lower bound).
-   * Set to 0n for custom deployments.
+   * Set to 0n for custom deployments. On BNB Chain (56 / 97) pass the
+   * proxy's deploy block - the Celo default is meaningless there.
    */
   deployBlock?: bigint;
 };

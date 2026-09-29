@@ -208,6 +208,10 @@ Addresses ship via `@yeheskieltame/claudelance-types`. `network: 'celo'` resolve
 | Network | core (v3 proxy) |
 |---------|------|
 | Celo Mainnet (42220), default | [`0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8`](https://celoscan.io/address/0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8#code) |
+| BSC Mainnet (56), `network: 'bsc'` | not deployed yet - pass `coreAddress` |
+| BSC Testnet (97), `network: 'bscTestnet'` | [`0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5`](https://testnet.bscscan.com/address/0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5) |
+
+BNB Chain: gas in BNB; token slots `cUSD`/`CELO`/`USDC` hold USDT / WBNB / USDC (18 decimals each) - use `NETWORK_META[network]` for symbols, decimals and explorer. `fromEnv()` reads `CLAUDELANCE_NETWORK=bsc|bscTestnet` and `CLAUDELANCE_CORE_ADDRESS`.
 
 ## Two packages
 

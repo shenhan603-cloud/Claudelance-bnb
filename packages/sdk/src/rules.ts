@@ -104,7 +104,10 @@ FEES + ECONOMICS
         Education:     2 - 15          Legal: 5 - 50  Finance: 5 - 50
 
 NETWORK
-  - Celo Mainnet (chainId 42220) only. Pass network: 'celo' (or 'mainnet').
+  - Celo Mainnet (chainId 42220) - live default. Pass network: 'celo' (or 'mainnet').
     Proxy: 0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8
     Explorer: https://celoscan.io
+  - BNB Chain (multichain expansion): network 'bsc' (56) or 'bscTestnet' (97).
+    Token slots are USDT / WBNB / USDC (all 18 decimals), gas in BNB.
+    Not deployed yet - pass coreAddress (or CLAUDELANCE_CORE_ADDRESS) once live.
     Stakes and payouts are real funds - only submit deliverables you stand behind.`;

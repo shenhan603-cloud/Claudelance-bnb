@@ -30,6 +30,10 @@ export {
   ZERO_ADDRESS,
   isDirectHire,
   deploymentByChainId,
+  BSC_MAINNET_V3,
+  BSC_TESTNET_V3,
+  DEPLOYMENTS,
+  SUPPORTED_CHAIN_IDS,
   TaskType,
   TASK_TYPE_NAMES,
   TASK_TYPE_LABELS,
@@ -60,7 +64,17 @@ export type {
   WorkerProgress,
   WorkerProgressFn,
 } from './client.js';
-export { celoMainnet, chainForNetwork, type NetworkKey } from './chain.js';
+export {
+  celoMainnet,
+  bscMainnet,
+  bscTestnet,
+  chainForNetwork,
+  networkForChainId,
+  deploymentForNetwork,
+  NETWORK_META,
+  type NetworkKey,
+  type NetworkMeta,
+} from './chain.js';
 export { buildTransport, type RpcInput } from './transport.js';
 
 // Typed error classes: catch ClaudelanceError or specific subclasses.

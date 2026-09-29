@@ -20,7 +20,9 @@
     "ai-agent",
     "mcp",
     "sdk",
-    "celo"
+    "celo",
+    "bnb-chain",
+    "bsc"
   ],
   "type": "module",
   "main": "./dist/index.cjs",

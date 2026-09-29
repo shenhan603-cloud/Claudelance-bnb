@@ -87,6 +87,10 @@ const [volume, revenue, resolved, posters, workers] =
 | Network | Address | Status |
 |---------|---------|--------|
 | **Celo Mainnet v3 (42220)** | [`0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8`](https://celoscan.io/address/0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8#code) | **v3 LIVE** (UUPS, types 0-10) |
+| BSC Mainnet (56) | `BSC_MAINNET_V3` - not deployed yet (`core = 0x0`, `live: false`) | planned |
+| BSC Testnet (97) | [`0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5`](https://testnet.bscscan.com/address/0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5) (`BSC_TESTNET_V3`) | testnet live (v3.1.0, not verified) |
+
+On BNB Chain the `TokenSet` slots hold USDT / WBNB / USDC (all 18 decimals); see `tokenSymbols` / `tokenDecimals` on the record. `DEPLOYMENTS` and `deploymentByChainId(42220 | 56 | 97)` cover all three.
 
 Mainnet token whitelist (v3):
 
