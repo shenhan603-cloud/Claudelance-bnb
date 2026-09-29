@@ -1,0 +1,38 @@
+version: 2
+
+# Auto-bump dependencies. Why: GitHub deprecates action runtimes (Node.js 20
+# end-of-life Sept 16 2026); without this we ship deprecation warnings.
+# How to apply: Dependabot opens a PR per ecosystem on the configured cadence;
+# review + merge.
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+      include: scope
+    labels:
+      - dependencies
+      - github-actions
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+      - javascript
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
