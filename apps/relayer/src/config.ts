@@ -96,7 +96,11 @@ const DEFAULT_EVENTS_FROM_BLOCK: Record<NetworkKey, bigint | undefined> = {
  */
 const DEFAULT_IDENTITY_FROM_BLOCK: Record<NetworkKey, bigint | undefined> = {
   celo: 58_000_000n,
-  // TODO(bnb): ERC-8004 registry deploy era on BSC; provide IDENTITY_EVENTS_FROM_BLOCK.
+  // BSC: the ERC-8004 registry deploy blocks are NOT discoverable via public
+  // RPCs (publicnode + bnbchain data-seed prune historical state, so an
+  // eth_getCode binary search converges on the prune boundary, not the deploy
+  // block). Find the contract-creation block on bscscan (or an archive RPC)
+  // and pass it via IDENTITY_EVENTS_FROM_BLOCK until tested defaults land.
   bsc: undefined,
   bscTestnet: undefined,
 };
