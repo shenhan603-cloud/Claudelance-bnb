@@ -1,0 +1,20 @@
+{
+  "chainId": 56,
+  "status": "NOT_DEPLOYED",
+  "note": "Placeholder for the BNB Chain expansion. Fill in after DeployV3.s.sol is broadcast with --rpc-url bsc --verify.",
+  "v3": {
+    "proxy": null,
+    "implementation": null,
+    "deployedAt": null
+  },
+  "tokens": {
+    "USDT": "0x55d398326f99059fF775485246999027B3197955",
+    "WBNB": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+    "USDC": "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
+  },
+  "identityRegistry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+  "reputationRegistry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
+  "treasury": null,
+  "ciRelayer": null,
+  "owner": null
+}

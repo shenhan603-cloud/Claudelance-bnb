@@ -23,7 +23,9 @@ contract Deploy is Script {
 
         uint256 minCusd = vm.envOr("MIN_BOUNTY_CUSD", uint256(0.5e18));
         uint256 minCelo = vm.envOr("MIN_BOUNTY_CELO", uint256(1e18));
-        uint256 minUsdc = vm.envOr("MIN_BOUNTY_USDC", uint256(0.5e6));
+        // USDC is 6 decimals on Celo but 18 decimals on BNB Chain (56 / 97).
+        bool isBsc = block.chainid == 56 || block.chainid == 97;
+        uint256 minUsdc = vm.envOr("MIN_BOUNTY_USDC", isBsc ? uint256(0.5e18) : uint256(0.5e6));
 
         bool allowShared = vm.envOr("ALLOW_SHARED_ADMIN_WALLETS", false);
 
@@ -34,7 +36,7 @@ contract Deploy is Script {
         require(cusd != address(0), "CUSD_ADDRESS missing");
         require(celo != address(0), "CELO_ADDRESS missing");
 
-        bool isMainnet = block.chainid == 42_220;
+        bool isMainnet = block.chainid == 42_220 || block.chainid == 56;
         if (isMainnet || !allowShared) {
             address deployer = msg.sender;
             require(owner != treasury, "owner == treasury");
@@ -130,6 +132,8 @@ contract Deploy is Script {
     function _chainName() internal view returns (string memory) {
         if (block.chainid == 42_220) return "celo-mainnet";
         if (block.chainid == 11_142_220) return "celo-sepolia";
+        if (block.chainid == 56) return "bsc-mainnet";
+        if (block.chainid == 97) return "bsc-testnet";
         return string.concat("chain-", vm.toString(block.chainid));
     }
 }

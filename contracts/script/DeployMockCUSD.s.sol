@@ -12,6 +12,7 @@ contract DeployMockCUSD is Script {
 
     function run() external returns (MockCUSD token) {
         require(block.chainid != 42_220, "DeployMockCUSD: refusing to run on Celo mainnet");
+        require(block.chainid != 56, "DeployMockCUSD: refusing to run on BSC mainnet");
 
         address recipient = vm.envOr("MOCK_CUSD_RECIPIENT", msg.sender);
 

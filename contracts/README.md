@@ -231,6 +231,32 @@ forge script script/DeployV3.s.sol \
 
 After deploy on mainnet, call `allowToken(token, minAmount)` for each token via Safe multisig.
 
+### v3 BNB Chain - chainid 97 (BSC testnet) / 56 (BSC mainnet) - multichain expansion, not yet deployed
+
+Celo stays the live production chain; BNB Chain is an additive second target.
+On BSC the three token slots are USDT / WBNB / USDC (all **18 decimals**).
+ERC-8004 reference registries exist at the same CREATE2 addresses on BSC
+(mainnet `0x8004A169...a432` / `0x8004BAa1...9b63`, testnet `0x8004A818...BD9e` / `0x8004B663...8713`).
+
+```bash
+source .env
+# 1. Testnet only: deploy mock USDT / WBNB / USDC (18 dec each)
+forge script script/DeployMocks.s.sol --rpc-url $BSC_TESTNET_RPC --broadcast --private-key $DEPLOYER_PRIVATE_KEY
+
+# 2. Deploy the v3 proxy (testnet may share keys; tokens are whitelisted inline)
+TREASURY_ADDRESS=... CI_RELAYER_ADDRESS=... OWNER_ADDRESS=... \
+IDENTITY_REGISTRY_ADDRESS=0x8004A818BFB912233c491871b3d84c89A494BD9e \
+REPUTATION_REGISTRY_ADDRESS=0x8004B663056A597Dffe9eCcC1965A193B7388713 \
+USDT_ADDRESS=<mock USDT> WBNB_ADDRESS=<mock WBNB> USDC_ADDRESS=<mock USDC> \
+ALLOW_SHARED_ADMIN_WALLETS=true \
+forge script script/DeployV3.s.sol --rpc-url bsc_testnet --broadcast --verify \
+  --private-key $DEPLOYER_PRIVATE_KEY
+```
+
+On BSC mainnet (`--rpc-url bsc`) `DeployV3` enforces 4-key separation like Celo mainnet,
+defaults USDT/WBNB/USDC to the canonical BEP-20 addresses, and leaves `allowToken` to the Safe.
+Record results in `deployments/bsc-{testnet,mainnet}.json` and `packages/types/src/deployments.ts`.
+
 ### v2 Mainnet - chainid 42220 (legacy)
 
 ```bash
