@@ -1,0 +1,63 @@
+{
+  "name": "@yeheskieltame/claudelance-types",
+  "version": "0.6.6",
+  "description": "TypeScript types, ABI, and deployment addresses for the Claudelance bounty marketplace on Celo and BNB Chain.",
+  "license": "MIT",
+  "author": "yeheskieltame",
+  "homepage": "https://github.com/yeheskieltame/claudelance-types#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeheskieltame/claudelance-types.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yeheskieltame/claudelance-types/issues"
+  },
+  "keywords": [
+    "celo",
+    "bnb-chain",
+    "bsc",
+    "claudelance",
+    "bounty",
+    "claude-code",
+    "abi",
+    "minipay",
+    "cusd"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "publish:npm": "pnpm publish --access public --registry https://registry.npmjs.org/",
+    "publish:github": "pnpm publish --access public --registry https://npm.pkg.github.com"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "sideEffects": false
+}
