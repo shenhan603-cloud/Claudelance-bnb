@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { readBountyDetail } from "@/lib/bounty-reads";
+import { DEFAULT_CHAIN_ID, LIVE_CHAIN_IDS } from "@/lib/chain";
 
 // Short window: this is the only cache layer between a fresh submission and
 // the poster's screen.
@@ -21,14 +22,24 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders });
 }
 
-export async function GET(_request: Request, { params }: { params: Params }) {
+export async function GET(request: Request, { params }: { params: Params }) {
   const { id: rawId } = await params;
   const bountyId = parseBountyId(rawId);
   if (!bountyId) {
     return NextResponse.json({ error: "id must be a positive bounty id" }, { status: 400, headers: corsHeaders });
   }
 
-  const detail = await readBountyDetail(bountyId);
+  const url = new URL(request.url);
+  const chainIdRaw = url.searchParams.get("chainId");
+  const chainId = chainIdRaw ? Number(chainIdRaw) : DEFAULT_CHAIN_ID;
+  if (!(LIVE_CHAIN_IDS as readonly number[]).includes(chainId)) {
+    return NextResponse.json(
+      { error: `chainId must be one of ${LIVE_CHAIN_IDS.join(", ")} (BSC mainnet pending deploy)` },
+      { status: 400, headers: corsHeaders },
+    );
+  }
+
+  const detail = await readBountyDetail(bountyId, chainId);
   if (!detail) {
     return NextResponse.json({ error: "bounty not found" }, { status: 404, headers: corsHeaders });
   }

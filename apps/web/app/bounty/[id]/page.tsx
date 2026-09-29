@@ -9,10 +9,13 @@ import { BountyDetailClient } from "@/components/bounty-detail";
 import { TaskTypeBadge } from "@/components/bounty-card";
 import { GlassCard } from "@/components/ui/card";
 import { readBountyDetail, type BountyDetailJson } from "@/lib/bounty-reads";
+import { DEFAULT_CHAIN_ID, LIVE_CHAIN_IDS, explorerBase } from "@/lib/chain";
+import { getDeployment } from "@/lib/contracts";
 import { formatTokenAmount } from "@/lib/format-token";
 import { shortAddress } from "@/lib/utils";
 
 type Params = Promise<{ id: string }>;
+type Search = Promise<{ chainId?: string }>;
 
 type BountyJson = BountyDetailJson;
 
@@ -41,7 +44,7 @@ function describeBriefLink(url: string): { label: string; isGithub: boolean } {
 // Direct chain read instead of a self-fetch through /api/bounty/[id]: the
 // page is dynamic, so every request sees the freshest state (the poster lands
 // here right after a worker submits) without an extra HTTP hop per view.
-async function fetchBounty(id: string): Promise<BountyJson | null> {
+async function fetchBounty(id: string, chainId: number): Promise<BountyJson | null> {
   let bountyId: bigint;
   try {
     bountyId = BigInt(id);
@@ -51,7 +54,7 @@ async function fetchBounty(id: string): Promise<BountyJson | null> {
   if (bountyId < 1n) return null;
 
   try {
-    return await readBountyDetail(bountyId);
+    return await readBountyDetail(bountyId, chainId);
   } catch {
     return null;
   }
@@ -59,11 +62,15 @@ async function fetchBounty(id: string): Promise<BountyJson | null> {
 
 export default async function BountyDetailPage({
   params,
+  searchParams,
 }: {
   params: Params;
+  searchParams: Search;
 }) {
   const { id } = await params;
-  const bounty = await fetchBounty(id);
+  const { chainId: chainIdRaw } = await searchParams;
+  const chainId = chainIdRaw ? Number(chainIdRaw) : DEFAULT_CHAIN_ID;
+  const bounty = await fetchBounty(id, chainId);
 
   if (!bounty) notFound();
 
@@ -80,7 +87,7 @@ export default async function BountyDetailPage({
           Back to bounties
         </Link>
 
-        <BountyHeader bounty={bounty} />
+        <BountyHeader bounty={bounty} chainId={chainId} />
 
         <Suspense
           fallback={
@@ -96,8 +103,10 @@ export default async function BountyDetailPage({
   );
 }
 
-function BountyHeader({ bounty }: { bounty: BountyJson }) {
-  const token = normalizeTokenSymbol(bounty.token);
+function BountyHeader({ bounty, chainId = DEFAULT_CHAIN_ID }: { bounty: BountyJson; chainId?: number }) {
+  const explorer = explorerBase(chainId);
+  const deploy = getDeployment(chainId);
+  const token = normalizeTokenSymbol(bounty.token, chainId);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const isPastDeadline = Number(bounty.deadline) <= nowSeconds;
   const isDirectHire =
@@ -195,8 +204,8 @@ function BountyHeader({ bounty }: { bounty: BountyJson }) {
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={<Coins className="h-4 w-4" />} label="Reward" value={`${formatToken(bounty.amount, bounty.token)} ${token}`} highlight />
-        <StatCard icon={<Shield className="h-4 w-4" />} label="Stake" value={`${formatToken(bounty.stakeRequired, bounty.token)} ${token}`} />
+        <StatCard icon={<Coins className="h-4 w-4" />} label="Reward" value={`${formatToken(bounty.amount, bounty.token, chainId)} ${token}`} highlight />
+        <StatCard icon={<Shield className="h-4 w-4" />} label="Stake" value={`${formatToken(bounty.stakeRequired, bounty.token, chainId)} ${token}`} />
         <StatCard icon={<Layers className="h-4 w-4" />} label="Slots" value={`${bounty.claimedSlots} / ${bounty.maxSlots}`} />
         <StatCard icon={<Clock className="h-4 w-4" />} label="Deadline" value={deadlineDate} />
       </div>
@@ -206,7 +215,7 @@ function BountyHeader({ bounty }: { bounty: BountyJson }) {
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <MetaRow icon={<User className="h-3.5 w-3.5" />} label="Poster">
             <a
-              href={`https://celoscan.io/address/${bounty.poster}`}
+              href={`${explorer}/address/${bounty.poster}`}
               target="_blank"
               rel="noreferrer"
               className="font-mono text-xs hover:text-primary transition-colors"
@@ -240,7 +249,7 @@ function BountyHeader({ bounty }: { bounty: BountyJson }) {
 
           <MetaRow icon={<ExternalLink className="h-3.5 w-3.5" />} label="On-chain">
             <a
-              href={`https://celoscan.io/address/0x68c83D75Ee95860E83A893Aa13556AdE8411e3c8#readContract`}
+              href={`${explorer}/address/${deploy.core}#readContract`}
               target="_blank"
               rel="noreferrer"
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -296,21 +305,24 @@ function MetaRow({
   );
 }
 
-function normalizeTokenSymbol(token: string) {
+function normalizeTokenSymbol(token: string, chainId: number = DEFAULT_CHAIN_ID) {
+  const deploy = getDeployment(chainId);
   const TOKENS: Record<string, string> = {
-    "0x765DE816845861e75A25fCA122bb6898B8B1282a": "cUSD",
-    "0x471EcE3750Da237f93B8E339c536989b8978a438": "CELO",
-    "0xcebA9300f2b948710d2653dD7B07f33A8B32118C": "USDC",
-    "0xb70c9Cd73428Afe51eEEA832C49E8840D3f85cA2": "LANCE",
+    [deploy.tokens.cUSD.toLowerCase()]: deploy.tokenSymbols?.cUSD ?? "cUSD",
+    [deploy.tokens.CELO.toLowerCase()]: deploy.tokenSymbols?.CELO ?? "CELO",
+    [deploy.tokens.USDC.toLowerCase()]: deploy.tokenSymbols?.USDC ?? "USDC",
+    ["0xb70c9Cd73428Afe51eEEA832C49E8840D3f85cA2".toLowerCase()]: "LANCE",
   };
-  return (
-    TOKENS[token] ?? TOKENS[token.toLowerCase()] ?? token.slice(0, 6) + "..."
-  );
+  return TOKENS[token.toLowerCase()] ?? token.slice(0, 6) + "...";
 }
 
-function formatToken(raw: string, tokenAddress: string): string {
+function formatToken(raw: string, tokenAddress: string, chainId: number = DEFAULT_CHAIN_ID): string {
+  const deploy = getDeployment(chainId);
+  // Celo USDC is 6 decimals; every BSC slot (USDT/WBNB/USDC) is 18.
   const decimals =
-    tokenAddress.toLowerCase() === MAINNET_V3.tokens.USDC.toLowerCase() ? 6 : 18;
+    tokenAddress.toLowerCase() === deploy.tokens.USDC.toLowerCase()
+      ? (deploy.tokenDecimals?.USDC ?? 6)
+      : 18;
   try {
     return formatTokenAmount(BigInt(raw), decimals, 2);
   } catch {

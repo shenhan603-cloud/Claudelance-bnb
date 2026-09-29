@@ -5,6 +5,7 @@ import {
   type StatusFilter,
   type TokenFilter,
 } from "@/lib/bounty-reads";
+import { DEFAULT_CHAIN_ID, LIVE_CHAIN_IDS } from "@/lib/chain";
 
 // Short window, mirroring the bounty detail fix: the list is the first place
 // a poster looks after resolving, and a 30s window kept showing Open.
@@ -44,6 +45,7 @@ function parseQuery(searchParams: URLSearchParams):
       token?: TokenFilter;
       limit: number;
       cursor: bigint;
+      chainId: number;
     }
   | { error: string } {
   const status = searchParams.get("status")?.toLowerCase();
@@ -73,10 +75,19 @@ function parseQuery(searchParams: URLSearchParams):
     return { error: "cursor must be a positive bounty id" };
   }
 
+  const chainIdRaw = searchParams.get("chainId");
+  const chainId = chainIdRaw ? Number(chainIdRaw) : DEFAULT_CHAIN_ID;
+  if (!(LIVE_CHAIN_IDS as readonly number[]).includes(chainId)) {
+    return {
+      error: `chainId must be one of ${LIVE_CHAIN_IDS.join(", ")} (BSC mainnet pending deploy)`,
+    };
+  }
+
   return {
     status: status as StatusFilter | undefined,
     token: token as TokenFilter | undefined,
     limit,
     cursor,
+    chainId,
   };
 }
