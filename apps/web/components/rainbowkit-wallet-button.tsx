@@ -1,7 +1,7 @@
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import { RainbowKitProvider, darkTheme, useConnectModal } from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, darkTheme, useChainModal, useConnectModal } from "@rainbow-me/rainbowkit";
 
 import { WalletButtonCore } from "@/components/wallet-button-core";
 
@@ -26,5 +26,6 @@ export default function RainbowKitWalletButton() {
 
 function RainbowKitWalletButtonInner() {
   const { openConnectModal } = useConnectModal();
-  return <WalletButtonCore onConnect={openConnectModal} />;
+  const { openChainModal } = useChainModal();
+  return <WalletButtonCore onConnect={openConnectModal} onSwitchChain={openChainModal} />;
 }

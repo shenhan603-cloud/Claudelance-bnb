@@ -14,9 +14,11 @@ type WalletButtonCoreProps = {
   // the dynamically-imported RainbowKit module is still loading (and in MiniPay,
   // where the connect happens via the injected connector instead).
   onConnect?: () => void;
+  // Opens RainbowKit's chain modal (Celo / BNB Chain). Undefined inside MiniPay (Celo only).
+  onSwitchChain?: () => void;
 };
 
-export function WalletButtonCore({ onConnect }: WalletButtonCoreProps) {
+export function WalletButtonCore({ onConnect, onSwitchChain }: WalletButtonCoreProps) {
   const { address, chain, connector, isConnected } = useAccount();
   const { connectAsync, connectors, isPending } = useConnect();
   const { disconnectAsync } = useDisconnect();
@@ -91,6 +93,19 @@ export function WalletButtonCore({ onConnect }: WalletButtonCoreProps) {
   if (miniPayActive && !connected) return null;
 
   return (
+    <div className="flex items-center gap-1.5">
+    {connected && onSwitchChain && !miniPayActive ? (
+      <Button
+        type="button"
+        size="sm"
+        variant="glass"
+        onClick={onSwitchChain}
+        title="Switch network (Celo / BNB Chain)"
+        className="h-9 px-2.5 text-[11px] font-semibold"
+      >
+        {chainName}
+      </Button>
+    ) : null}
     <Button
       type="button"
       size="sm"
@@ -132,5 +147,6 @@ export function WalletButtonCore({ onConnect }: WalletButtonCoreProps) {
       )}
       {connected ? <LogOut aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground sm:hidden" /> : null}
     </Button>
+    </div>
   );
 }

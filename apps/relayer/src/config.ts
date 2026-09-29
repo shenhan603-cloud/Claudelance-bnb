@@ -1,6 +1,7 @@
-import { MAINNET, type Deployment } from '@yeheskieltame/claudelance-sdk';
+import { deploymentForNetwork, type Deployment } from '@yeheskieltame/claudelance-sdk';
 
-export type NetworkKey = 'celo';
+/** Celo mainnet (default, live) or BNB Chain mainnet / testnet. */
+export type NetworkKey = 'celo' | 'bsc' | 'bscTestnet';
 
 export type RelayerConfig = {
   network: NetworkKey;
@@ -50,8 +51,17 @@ function parseBool(value: string | undefined, fallback: boolean): boolean {
   return value === '1' || value.toLowerCase() === 'true';
 }
 
-function parseNetwork(_value: string | undefined): NetworkKey {
-  // Celo Mainnet (chain 42220) is the only supported network.
+/**
+ * Resolve the network from RELAYER_NETWORK ('celo' | 'bsc' | 'bscTestnet') or
+ * CHAIN_ID (42220 | 56 | 97). Defaults to Celo Mainnet (42220), the live chain.
+ */
+function parseNetwork(value: string | undefined, chainId: string | undefined): NetworkKey {
+  const v = (value ?? '').trim();
+  if (v === 'bsc' || v === 'bscTestnet') return v;
+  if (chainId === '56') return 'bsc';
+  if (chainId === '97') return 'bscTestnet';
+  // Anything else (including legacy 'sepolia' / 'mainnet') keeps the historical
+  // behavior: Celo Mainnet.
   return 'celo';
 }
 
@@ -71,8 +81,12 @@ function parseCeloToWei(value: string | undefined, fallback: bigint): bigint {
  * mainnet proxy deploy block, so webhook lookups never reach back toward genesis
  * (forno times out on an unbounded eth_getLogs).
  */
-const DEFAULT_EVENTS_FROM_BLOCK: Record<NetworkKey, bigint> = {
+const DEFAULT_EVENTS_FROM_BLOCK: Record<NetworkKey, bigint | undefined> = {
   celo: 68_689_178n,
+  // TODO(bnb): set to the BSC mainnet proxy deploy block once deployed. Until then
+  // EVENTS_FROM_BLOCK must be provided explicitly on BSC mainnet.
+  bsc: undefined,
+  bscTestnet: 132_984_885n, // BSC testnet v3 proxy deploy block
 };
 
 /**
@@ -80,19 +94,41 @@ const DEFAULT_EVENTS_FROM_BLOCK: Record<NetworkKey, bigint> = {
  * mainnet registry went live early Feb 2026 (~block 58M), so no mint can
  * predate it.
  */
-const DEFAULT_IDENTITY_FROM_BLOCK: Record<NetworkKey, bigint> = {
+const DEFAULT_IDENTITY_FROM_BLOCK: Record<NetworkKey, bigint | undefined> = {
   celo: 58_000_000n,
+  // TODO(bnb): ERC-8004 registry deploy era on BSC; provide IDENTITY_EVENTS_FROM_BLOCK.
+  bsc: undefined,
+  bscTestnet: undefined,
 };
 
+function blockFloor(
+  value: string | undefined,
+  defaults: Record<NetworkKey, bigint | undefined>,
+  network: NetworkKey,
+  name: string,
+): bigint {
+  if (value !== undefined && value !== '') return BigInt(value);
+  const d = defaults[network];
+  if (d === undefined) {
+    throw new Error(`[relayer] ${name} is required on ${network} (no default scan floor yet)`);
+  }
+  return d;
+}
+
 /**
- * Build the relayer config from the environment. Mainnet only: MAINNET resolves
- * to the v3 proxy deployment. Fails fast when asked to broadcast (DRY_RUN=false)
+ * Build the relayer config from the environment. Celo mainnet (default) resolves
+ * to the live v3 proxy deployment; BNB Chain (bsc / bscTestnet) needs CORE_ADDRESS. Fails fast when asked to broadcast (DRY_RUN=false)
  * without a signing key, so a misconfigured deploy never silently runs without
  * the ability to act.
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): RelayerConfig {
-  const network = parseNetwork(env.RELAYER_NETWORK);
-  const deployment = MAINNET;
+  const network = parseNetwork(env.RELAYER_NETWORK, env.CHAIN_ID);
+  // Celo resolves to the live v3 proxy. BNB Chain needs CORE_ADDRESS until
+  // the canonical BSC records are published in claudelance-types.
+  const deployment = deploymentForNetwork(
+    network,
+    (env.CORE_ADDRESS || undefined) as `0x${string}` | undefined,
+  );
   const dryRun = parseBool(env.DRY_RUN, true);
   const relayerPrivateKey = env.RELAYER_PRIVATE_KEY
     ? (env.RELAYER_PRIVATE_KEY as `0x${string}`)
@@ -125,16 +161,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RelayerConfig 
     dryRun,
     port: Number(env.PORT ?? 8787),
     keeperIntervalMs: Number(env.KEEPER_INTERVAL_MS ?? 60_000),
-    keeperMinBalanceWei: parseCeloToWei(env.KEEPER_MIN_BALANCE_CELO, 600_000_000_000_000_000n), // 0.6 CELO
+    // Native gas token floor: CELO on Celo, BNB on BSC (KEEPER_MIN_BALANCE_NATIVE wins).
+    keeperMinBalanceWei: parseCeloToWei(
+      env.KEEPER_MIN_BALANCE_NATIVE || env.KEEPER_MIN_BALANCE_CELO,
+      network === 'celo' ? 600_000_000_000_000_000n : 10_000_000_000_000_000n, // 0.6 CELO / 0.01 BNB
+    ),
     eventPollMs: Number(env.EVENT_POLL_MS ?? 5_000),
-    eventsFromBlock:
-      env.EVENTS_FROM_BLOCK !== undefined && env.EVENTS_FROM_BLOCK !== ''
-        ? BigInt(env.EVENTS_FROM_BLOCK)
-        : DEFAULT_EVENTS_FROM_BLOCK[network],
-    identityEventsFromBlock:
-      env.IDENTITY_EVENTS_FROM_BLOCK !== undefined && env.IDENTITY_EVENTS_FROM_BLOCK !== ''
-        ? BigInt(env.IDENTITY_EVENTS_FROM_BLOCK)
-        : DEFAULT_IDENTITY_FROM_BLOCK[network],
+    eventsFromBlock: blockFloor(env.EVENTS_FROM_BLOCK, DEFAULT_EVENTS_FROM_BLOCK, network, 'EVENTS_FROM_BLOCK'),
+    identityEventsFromBlock: blockFloor(
+      env.IDENTITY_EVENTS_FROM_BLOCK,
+      DEFAULT_IDENTITY_FROM_BLOCK,
+      network,
+      'IDENTITY_EVENTS_FROM_BLOCK',
+    ),
     coworkingApiUrl,
     coworkingApiKeys,
     reputationBridgeEnabled,

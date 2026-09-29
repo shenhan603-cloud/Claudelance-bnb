@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useAccount, useReadContracts } from "wagmi";
+import { useAccount, useChainId, useReadContracts } from "wagmi";
 import { erc20Abi, formatUnits } from "viem";
 import { ArrowUpRight, RefreshCw } from "lucide-react";
 
 import { GlassCard } from "@/components/ui/card";
-import { WALLET_TOKENS } from "@/lib/wallet/tokens";
+import { WALLET_TOKENS, walletTokensFor } from "@/lib/wallet/tokens";
 import { TOKEN_BADGE } from "@/lib/token-theme";
-import { DEFAULT_CHAIN_ID } from "@/lib/chain";
+import { DEFAULT_CHAIN_ID, isBscChain } from "@/lib/chain";
 import { cn } from "@/lib/utils";
 
 function formatBalance(raw: bigint, decimals: number): string {
@@ -24,15 +24,19 @@ function formatBalance(raw: bigint, decimals: number): string {
  */
 export function AssetList({ onSend }: { onSend?: (symbol: (typeof WALLET_TOKENS)[number]["symbol"]) => void }) {
   const { address, isConnected } = useAccount();
+  // Celo by default; when the wallet is on BNB Chain show the BSC token set.
+  const connectedChainId = useChainId();
+  const chainId = isBscChain(connectedChainId) ? connectedChainId : DEFAULT_CHAIN_ID;
+  const tokens = walletTokensFor(chainId);
 
   const { data, isLoading, refetch, isRefetching } = useReadContracts({
     allowFailure: true,
-    contracts: WALLET_TOKENS.map((t) => ({
+    contracts: tokens.map((t) => ({
       address: t.address,
       abi: erc20Abi,
       functionName: "balanceOf" as const,
       args: address ? [address] : undefined,
-      chainId: DEFAULT_CHAIN_ID,
+      chainId,
     })),
     query: { enabled: Boolean(address), refetchInterval: 30_000 },
   });
@@ -53,7 +57,7 @@ export function AssetList({ onSend }: { onSend?: (symbol: (typeof WALLET_TOKENS)
       </div>
 
       <div className="mt-4 space-y-2">
-        {WALLET_TOKENS.map((token, i) => {
+        {tokens.map((token, i) => {
           const result = data?.[i];
           const raw = result?.status === "success" ? (result.result as bigint) : 0n;
           const showLoading = isLoading && !data;

@@ -1,19 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useAccount, useChainId, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { erc20Abi, formatUnits, getAddress, isAddress, parseUnits, type Address, type Hash } from "viem";
 import { Loader2, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/card";
 import { useTransactionToast } from "@/components/transaction-toast";
-import { WALLET_TOKENS, tokenBySymbol } from "@/lib/wallet/tokens";
+import { tokenBySymbol, walletTokensFor } from "@/lib/wallet/tokens";
 import type { TokenSymbol } from "@/lib/token-theme";
 import { TOKEN_BADGE } from "@/lib/token-theme";
 import { miniPayFeeCurrency } from "@/lib/wallet/fee-currency";
 import { MiniPayAddCash } from "@/components/minipay-add-cash";
-import { DEFAULT_CHAIN_ID } from "@/lib/chain";
+import { DEFAULT_CHAIN_ID, isBscChain } from "@/lib/chain";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,7 +30,16 @@ export function SendToken({
   onTokenChange: (symbol: TokenSymbol) => void;
 }) {
   const { address, isConnected } = useAccount();
-  const meta = tokenBySymbol(token);
+  // Celo by default; BSC token set (18-dec stables) when the wallet is on BNB Chain.
+  const connectedChainId = useChainId();
+  const chainId = isBscChain(connectedChainId) ? connectedChainId : DEFAULT_CHAIN_ID;
+  const onBsc = chainId !== DEFAULT_CHAIN_ID;
+  const walletTokens = walletTokensFor(chainId);
+  const meta = tokenBySymbol(token, chainId);
+  // Switching Celo <-> BNB Chain changes the token set; snap to a valid symbol.
+  React.useEffect(() => {
+    if (walletTokens.length > 0 && !walletTokens.some((t) => t.symbol === token)) onTokenChange(walletTokens[0]!.symbol);
+  }, [walletTokens, token, onTokenChange]);
 
   const [to, setTo] = React.useState("");
   const [amount, setAmount] = React.useState("");
@@ -43,7 +52,7 @@ export function SendToken({
     abi: erc20Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
-    chainId: DEFAULT_CHAIN_ID,
+    chainId,
     query: { enabled: Boolean(address) },
   });
   const balance = typeof balanceRaw === "bigint" ? balanceRaw : 0n;
@@ -52,8 +61,9 @@ export function SendToken({
     pendingMessage: `Sending ${token}`,
     confirmedMessage: `${token} sent`,
     failedMessage: "Transfer failed",
+    chainId,
   });
-  const { isSuccess: sent } = useWaitForTransactionReceipt({ hash: txHash ?? undefined });
+  const { isSuccess: sent } = useWaitForTransactionReceipt({ hash: txHash ?? undefined, chainId });
   React.useEffect(() => {
     if (!sent) return;
     setAmount("");
@@ -67,7 +77,7 @@ export function SendToken({
   const parsedAmount = amountValid ? safeParse(amount, meta.decimals) : null;
   const overBalance = parsedAmount !== null && parsedAmount > balance;
   const sendingToSelf = toValid && address ? getAddress(toTrimmed) === getAddress(address) : false;
-  const canSend = isConnected && toValid && amountValid && parsedAmount !== null && !overBalance && !sendingToSelf;
+  const canSend = walletTokens.length > 0 && isConnected && toValid && amountValid && parsedAmount !== null && !overBalance && !sendingToSelf;
 
   const setMax = () => setAmount(formatUnits(balance, meta.decimals));
 
@@ -80,7 +90,7 @@ export function SendToken({
         abi: erc20Abi,
         functionName: "transfer",
         args: [getAddress(toTrimmed), parsedAmount],
-        feeCurrency: miniPayFeeCurrency(meta.address),
+        feeCurrency: onBsc ? undefined : miniPayFeeCurrency(meta.address),
       })) as Hash;
       setTxHash(hash);
     } catch (error) {
@@ -102,7 +112,7 @@ export function SendToken({
 
       {/* Token picker */}
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="Token to send">
-        {WALLET_TOKENS.map((t) => {
+        {walletTokens.map((t) => {
           const active = t.symbol === token;
           return (
             <button
@@ -193,7 +203,7 @@ export function SendToken({
         </div>
       ) : null}
 
-      {overBalance ? <MiniPayAddCash className="mt-3" /> : null}
+      {overBalance && !onBsc ? <MiniPayAddCash className="mt-3" /> : null}
     </GlassCard>
   );
 }

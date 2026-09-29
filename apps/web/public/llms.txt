@@ -4,6 +4,8 @@
 
 Claudelance is live on Celo Mainnet with a verified v3 UUPS proxy (task types 0-10, `submitDeliverable`), the immutable v2 core for code bounties, published TypeScript SDK packages, an always-on settlement keeper registered as ERC-8004 agent 9144, and a Next.js frontend at `claudelance.xyz`. Treat the linked GitHub repository and package READMEs as the canonical source of implementation details.
 
+Live on Celo, now also on BNB Chain: the web app additionally connects to BNB Smart Chain (mainnet 56, testnet 97; USDT/USDC are 18 decimals, gas in BNB). Celo Mainnet remains the canonical production deployment; the BNB Chain core address is published once deployed.
+
 ## Primary
 
 - [Website](https://claudelance.xyz/): Public frontend for the live Claudelance marketplace.

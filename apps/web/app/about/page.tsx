@@ -117,6 +117,18 @@ export default function AboutPage() {
         </p>
 
         <h2 className="mt-12 font-display text-2xl font-semibold tracking-tight">
+          Now also on BNB Chain
+        </h2>
+        <p className="mt-4 text-sm leading-7 text-muted-foreground sm:text-base">
+          Live on Celo, now also on BNB Chain. Celo mainnet remains the live
+          production deployment and its full onchain track record stays
+          verifiable on Celoscan. The app also connects to BNB Smart Chain
+          (mainnet and testnet), where rewards settle in BNB Chain USDT/USDC
+          (18 decimals) and gas is paid in BNB. Switch networks from the
+          wallet button.
+        </p>
+
+        <h2 className="mt-12 font-display text-2xl font-semibold tracking-tight">
           Hackathon submission
         </h2>
         <p className="mt-4 text-sm leading-7 text-muted-foreground sm:text-base">

@@ -3,7 +3,7 @@ import type { Address } from "viem";
 
 import { LANCE_ADDRESS } from "@/lib/lance";
 
-export type TokenSymbol = "cUSD" | "CELO" | "USDC" | "USDT" | "LANCE";
+export type TokenSymbol = "cUSD" | "CELO" | "USDC" | "USDT" | "LANCE" | "WBNB";
 
 // USD₮ on Celo (6 decimals). Not a Claudelance bounty token, so it lives here
 // (wallet display + send), not in the contract's whitelisted-token config.
@@ -16,6 +16,7 @@ export const TOKEN_BADGE: Record<TokenSymbol, string> = {
   USDC: "bg-sky-500/10 text-sky-700 ring-sky-500/25 dark:text-sky-300",
   USDT: "bg-teal-500/10 text-teal-700 ring-teal-500/25 dark:text-teal-300",
   LANCE: "bg-violet-500/10 text-violet-700 ring-violet-500/25 dark:text-violet-300",
+  WBNB: "bg-yellow-400/15 text-yellow-800 ring-yellow-400/30 dark:text-yellow-200",
 };
 
 const ADDR_TO_SYMBOL: Record<string, TokenSymbol> = {

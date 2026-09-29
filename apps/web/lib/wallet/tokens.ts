@@ -2,6 +2,8 @@ import type { Address } from "viem";
 import { MAINNET_V3 } from "@yeheskieltame/claudelance-types";
 
 import { type TokenSymbol, USDT_ADDRESS } from "@/lib/token-theme";
+import { bscDeployments } from "@/lib/contracts";
+import { isBscChain } from "@/lib/chain";
 
 export type TokenMeta = {
   symbol: TokenSymbol;
@@ -24,8 +26,26 @@ export const WALLET_TOKENS: readonly TokenMeta[] = [
   { symbol: "USDT", address: USDT_ADDRESS, decimals: 6, name: "Tether USD" },
 ] as const;
 
-export function tokenBySymbol(symbol: TokenSymbol): TokenMeta {
-  const found = WALLET_TOKENS.find((t) => t.symbol === symbol);
+/** BNB Chain wallet tokens. All BSC stables are 18 decimals (unlike Celo). */
+function bscWalletTokens(chainId: number): readonly TokenMeta[] {
+  const d = bscDeployments[chainId] ?? {};
+  const rows: TokenMeta[] = [];
+  if (d.USDT) rows.push({ symbol: "USDT", address: d.USDT, decimals: 18, name: "Tether USD (BSC)" });
+  if (d.USDC) rows.push({ symbol: "USDC", address: d.USDC, decimals: 18, name: "USD Coin (BSC)" });
+  if (d.WBNB) rows.push({ symbol: "WBNB", address: d.WBNB, decimals: 18, name: "Wrapped BNB" });
+  return rows;
+}
+
+/** Wallet tokens for the given chain: Celo set by default, BSC set on 56/97. */
+export function walletTokensFor(chainId?: number): readonly TokenMeta[] {
+  return chainId !== undefined && isBscChain(chainId) ? bscWalletTokens(chainId) : WALLET_TOKENS;
+}
+
+export function tokenBySymbol(symbol: TokenSymbol, chainId?: number): TokenMeta {
+  const list = walletTokensFor(chainId);
+  // Falls back to the Celo set when a BSC chain has no tokens configured (callers
+  // must gate sends on walletTokensFor(chainId).length).
+  const found = list.find((t) => t.symbol === symbol) ?? list[0] ?? WALLET_TOKENS.find((t) => t.symbol === symbol);
   if (!found) throw new Error(`Unknown token symbol ${symbol}`);
   return found;
 }

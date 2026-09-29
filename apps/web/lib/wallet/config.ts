@@ -4,7 +4,7 @@ import type { EIP1193Provider } from "viem";
 import { createConfig, http } from "wagmi";
 import { injected } from "wagmi/connectors";
 
-import { celoMainnet } from "../chain";
+import { bscMainnet, bscTestnet, celoMainnet } from "../chain";
 
 type MiniPayCandidate = {
   isMiniPay?: boolean;
@@ -53,12 +53,15 @@ const externalConnectors = connectorsForWallets(
 );
 
 export const wagmiConfig = createConfig({
-  chains: [celoMainnet],
+  // Celo stays first (default chain); BNB Chain mainnet + testnet are additive.
+  chains: [celoMainnet, bscMainnet, bscTestnet],
   // MiniPay first (injected webview); RainbowKit's wallets cover the browser.
   connectors: [miniPayConnector, ...externalConnectors],
   ssr: true,
   transports: {
     [celoMainnet.id]: http(process.env.NEXT_PUBLIC_CELO_MAINNET_RPC),
+    [bscMainnet.id]: http(process.env.NEXT_PUBLIC_BSC_RPC_URL),
+    [bscTestnet.id]: http(process.env.NEXT_PUBLIC_BSC_TESTNET_RPC_URL),
   },
 });
 

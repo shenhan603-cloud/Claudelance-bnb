@@ -88,7 +88,7 @@ export class ChainClient {
   constructor(cfg: RelayerConfig) {
     const chain = chainForNetwork(cfg.network);
     const transport = http(cfg.rpcUrl);
-    // 1s polling matches Celo's block time; viem's 4s default adds dead air
+    // 1s polling matches Celo's ~1s block time (BSC is ~0.75-3s); viem's 4s default adds dead air
     // to every waitForTransactionReceipt.
     this.publicClient = createPublicClient({ chain, transport, pollingInterval: 1_000 });
     this.core = cfg.deployment.core;
@@ -281,8 +281,12 @@ export class ChainClient {
    * windows down to `fromBlock`. Returns the latest minted id, or null.
    */
   async findAgentIdByOwner(worker: Address, fromBlock: bigint): Promise<bigint | null> {
-    const WINDOW = 250_000n;
-    const MAX_WINDOWS = 100;
+    // Celo (forno) accepts 250k-block eth_getLogs ranges. BSC public RPCs cap the
+    // range at 50k blocks (publicnode) and blocks are faster, so use smaller
+    // windows and allow more of them there.
+    const isCelo = this.publicClient.chain?.id === 42_220;
+    const WINDOW = isCelo ? 250_000n : 50_000n;
+    const MAX_WINDOWS = isCelo ? 100 : 1_000;
     let hi = await this.publicClient.getBlockNumber();
     const padded: `0x${string}` = `0x${worker.slice(2).toLowerCase().padStart(64, '0')}`;
     const topics: [`0x${string}`, null, `0x${string}`] = [TRANSFER_TOPIC, null, padded];

@@ -68,6 +68,13 @@ NEXT_PUBLIC_CHAIN=celo            # celo (mainnet); default: celo
 NEXT_PUBLIC_CELO_RPC=             # override mainnet RPC if you have one
 NEXT_PUBLIC_PRIVY_APP_ID=         # Privy app id for the upcoming auth provider wiring
 NEXT_PUBLIC_COWORKING_API_URL=    # Coworking API base; defaults to the live Railway URL
+
+# BNB Chain (additive; Celo stays the default chain)
+NEXT_PUBLIC_BSC_RPC_URL=              # BSC mainnet (56) RPC override
+NEXT_PUBLIC_BSC_TESTNET_RPC_URL=      # BSC testnet (97) RPC override
+NEXT_PUBLIC_BSC_CORE_ADDRESS=         # ClaudelanceCore on BSC mainnet (TODO: deploy)
+NEXT_PUBLIC_BSC_TESTNET_CORE_ADDRESS= # ClaudelanceCore on BSC testnet (TODO: deploy)
+NEXT_PUBLIC_BSC_TESTNET_USDT_ADDRESS= # MockERC20 USDT (18 dec) on BSC testnet
 ```
 
 The Coworking board defaults to the live Railway API
@@ -93,7 +100,7 @@ Privy configuration details live in [`docs/PRIVY_SETUP.md`](./docs/PRIVY_SETUP.m
 
 ```
 lib/
-  chain.ts        viem defineChain for Celo Mainnet
+  chain.ts        chains: Celo Mainnet (default) + BNB Chain mainnet/testnet
   contracts.ts    typed deployment addresses + read-only ABI surface
   stats.ts        server-side multicall used by the landing stats card
   minipay.ts      useMiniPayDetection, Opera MiniPay in-app browser check

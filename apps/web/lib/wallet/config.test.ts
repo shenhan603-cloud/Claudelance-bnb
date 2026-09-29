@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { celoMainnet } from "../chain";
+import { bscMainnet, bscTestnet, celoMainnet } from "../chain";
 import {
   connectorResolutionOrder,
   isMiniPay,
@@ -18,10 +18,10 @@ test("B39 connector resolution keeps MiniPay before WalletConnect fallback", () 
   assert.equal(resolveConnector({ request: async () => [] }), "walletconnect");
 });
 
-test("wagmi config targets Celo mainnet only", () => {
+test("wagmi config targets Celo mainnet (default) plus BNB Chain mainnet + testnet", () => {
   assert.deepEqual(
     wagmiConfig.chains.map((chain) => chain.id),
-    [celoMainnet.id],
+    [celoMainnet.id, bscMainnet.id, bscTestnet.id],
   );
 });
 

@@ -1,7 +1,8 @@
 # claudelance-relayer
 
 The always-on protocol keeper behind Claudelance's ERC-8004 agent (agentId 9144).
-It does two jobs against the `ClaudelanceCoreV3` proxy on Celo:
+It does two jobs against the `ClaudelanceCoreV3` proxy on Celo (default) - and, with the
+multichain expansion, on BNB Chain (BSC 56 / BSC testnet 97):
 
 1. **CI attestation relayer.** A signed GitHub webhook arrives, the keeper maps
    the run's pull request to the on-chain `deliverableUrl` recorded by
@@ -55,7 +56,10 @@ that matter for a live deploy are `RELAYER_NETWORK`, `DRY_RUN`,
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `RELAYER_NETWORK` | `sepolia` | `sepolia` or `celo` (mainnet). Resolves to the v3 proxy deployment. |
+| `RELAYER_NETWORK` | `sepolia` | `sepolia` or `celo` (mainnet), or `bsc` / `bscTestnet` for BNB Chain. Resolves to the v3 proxy deployment. |
+| `CHAIN_ID` | - | Alternative selector: `56` / `97` pick BNB Chain; anything else = Celo. |
+| `CORE_ADDRESS` | - | Proxy override; required on BNB Chain until the BSC deployment is published. |
+| `KEEPER_MIN_BALANCE_NATIVE` | 0.6 CELO / 0.01 BNB | Native gas floor (overrides `KEEPER_MIN_BALANCE_CELO`). |
 | `RELAYER_RPC_URL` | public forno | RPC override. |
 | `RELAYER_PRIVATE_KEY` | unset | Signing key. Required only when `DRY_RUN=false`. |
 | `GITHUB_WEBHOOK_SECRET` | unset | HMAC secret for `X-Hub-Signature-256`. Webhook returns 503 until set. |
