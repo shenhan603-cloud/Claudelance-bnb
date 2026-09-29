@@ -1,0 +1,152 @@
+"use client";
+
+import * as React from "react";
+import { Check, ChevronDown, Loader2, LogOut, Wallet } from "lucide-react";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+
+import { Button } from "@/components/ui/button";
+import { DEFAULT_CHAIN_ID, chainById } from "@/lib/chain";
+import { isMiniPay, pickInjectedConnector } from "@/lib/wallet/config";
+import { cn, shortAddress } from "@/lib/utils";
+
+type WalletButtonCoreProps = {
+  // Opens the RainbowKit connect modal for non-MiniPay sign-in. Undefined while
+  // the dynamically-imported RainbowKit module is still loading (and in MiniPay,
+  // where the connect happens via the injected connector instead).
+  onConnect?: () => void;
+  // Opens RainbowKit's chain modal (Celo / BNB Chain). Undefined inside MiniPay (Celo only).
+  onSwitchChain?: () => void;
+};
+
+export function WalletButtonCore({ onConnect, onSwitchChain }: WalletButtonCoreProps) {
+  const { address, chain, connector, isConnected } = useAccount();
+  const { connectAsync, connectors, isPending } = useConnect();
+  const { disconnectAsync } = useDisconnect();
+  const [miniPayActive, setMiniPayActive] = React.useState(false);
+  const longPressRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    setMiniPayActive(isMiniPay(window.ethereum));
+  }, []);
+
+  const chainName = chain?.name ?? chainById(DEFAULT_CHAIN_ID)?.name ?? "Celo";
+  const connectorName = miniPayActive ? "MiniPay" : connector?.name ?? "Wallet";
+  const connected = isConnected;
+  const displayAddress = address;
+  const label = displayAddress ? shortAddress(displayAddress) : connected ? "Connected" : "Connect";
+  const disabled = isPending;
+
+  async function connectWallet() {
+    if (connected || disabled) return;
+
+    if (miniPayActive) {
+      const miniPayConnector = connectors.find((item) => item.id === "minipay");
+      if (miniPayConnector) {
+        await connectAsync({ connector: miniPayConnector, chainId: DEFAULT_CHAIN_ID });
+        return;
+      }
+      const provider = window.ethereum;
+      if (isMiniPay(provider)) {
+        await provider.request?.({ method: "eth_requestAccounts" });
+      }
+      return;
+    }
+
+    // Outside MiniPay, RainbowKit owns wallet selection. Fall back to a direct
+    // injected connect only if the modal has not loaded yet.
+    if (onConnect) {
+      onConnect();
+      return;
+    }
+
+    const injectedConnector = pickInjectedConnector(connectors);
+    if (injectedConnector) {
+      await connectAsync({ connector: injectedConnector, chainId: DEFAULT_CHAIN_ID });
+    }
+  }
+
+  async function disconnectWallet() {
+    if (!connected) return;
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = null;
+    }
+    await disconnectAsync().catch(() => undefined);
+  }
+
+  function startLongPress(event: React.PointerEvent<HTMLButtonElement>) {
+    if (!connected || event.pointerType === "mouse") return;
+    longPressRef.current = setTimeout(() => {
+      void disconnectWallet();
+    }, 650);
+  }
+
+  function cancelLongPress() {
+    if (!longPressRef.current) return;
+    clearTimeout(longPressRef.current);
+    longPressRef.current = null;
+  }
+
+  // Inside MiniPay the wallet is implicit and auto-connected, so suppress the
+  // connect affordance entirely until a session exists.
+  if (miniPayActive && !connected) return null;
+
+  return (
+    <div className="flex items-center gap-1.5">
+    {connected && onSwitchChain && !miniPayActive ? (
+      <Button
+        type="button"
+        size="sm"
+        variant="glass"
+        onClick={onSwitchChain}
+        title="Switch network (Celo / BNB Chain)"
+        className="h-9 px-2.5 text-[11px] font-semibold"
+      >
+        {chainName}
+      </Button>
+    ) : null}
+    <Button
+      type="button"
+      size="sm"
+      variant={connected ? "glass" : "primary"}
+      disabled={disabled}
+      onClick={() => void connectWallet()}
+      onContextMenu={(event) => {
+        if (!connected) return;
+        event.preventDefault();
+        void disconnectWallet();
+      }}
+      onPointerDown={startLongPress}
+      onPointerUp={cancelLongPress}
+      onPointerLeave={cancelLongPress}
+      onPointerCancel={cancelLongPress}
+      title={connected ? "Right-click or long-press to disconnect" : "Connect a wallet"}
+      className={cn("h-9 min-w-0 px-3 sm:min-w-36 sm:px-4", connected && "pr-2")}
+    >
+      {isPending ? (
+        <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+      ) : connected ? (
+        <Check aria-hidden="true" className="h-4 w-4 text-success" />
+      ) : (
+        <Wallet aria-hidden="true" className="h-4 w-4" />
+      )}
+      <span className="hidden max-w-28 truncate sm:inline">{label}</span>
+      <span className="sr-only">{connected ? `${label} connected on ${chainName}` : "Connect wallet"}</span>
+      {connected ? (
+        <>
+          <span className="hidden rounded-full border border-border/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground md:inline">
+            {connectorName}
+          </span>
+          <span className="hidden rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success sm:inline">
+            {chainName}
+          </span>
+        </>
+      ) : (
+        <ChevronDown aria-hidden="true" className="hidden h-3.5 w-3.5 sm:block" />
+      )}
+      {connected ? <LogOut aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground sm:hidden" /> : null}
+    </Button>
+    </div>
+  );
+}
