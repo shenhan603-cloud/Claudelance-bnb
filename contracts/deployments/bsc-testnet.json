@@ -1,7 +1,7 @@
 {
   "chainId": 97,
   "status": "DEPLOYED",
-  "note": "Deployed 2026-09-25 with DeployMocks.s.sol + DeployV3.s.sol --rpc-url bsc_testnet. Not verified on BscScan (no ETHERSCAN_API_KEY available).",
+  "note": "Deployed 2026-09-25 with DeployMocks.s.sol + DeployV3.s.sol --rpc-url bsc_testnet. Proxy and implementation verified on BscScan testnet 2026-09-29 (solc 0.8.24, via-ir, optimizer 200).",
   "v3": {
     "proxy": "0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5",
     "implementation": "0xEB194356B798b81586B589e294b8b1b989895C63",
