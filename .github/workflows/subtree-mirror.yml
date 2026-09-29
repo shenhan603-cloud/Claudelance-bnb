@@ -1,0 +1,53 @@
+name: Subtree mirror
+
+# Mirror packages/sdk and packages/types histories to dedicated single-package
+# repos (yeheskieltame/claudelance-sdk, yeheskieltame/claudelance-types) for
+# shallow-scan crawler compatibility. See docs/subtree-mirrors.md.
+#
+# Trigger:
+#   - pkg-v* tags (same trigger as publish-npm.yml - keeps mirror in sync with
+#     each npm release)
+#   - manual workflow_dispatch with optional package filter
+
+on:
+  push:
+    tags:
+      - 'pkg-v*'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'sdk | types | all (default all)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - sdk
+          - types
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          # Use a deploy-PAT that has push access to the mirror repos.
+          # Add MIRROR_PUSH_TOKEN repo secret (classic PAT with `repo` scope).
+          token: ${{ secrets.MIRROR_PUSH_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "yeheskieltame-bot"
+          git config user.email "bot@claudelance.dev"
+
+      - name: Run subtree publish
+        env:
+          SUBTREE_OWNER: yeheskieltame
+        run: |
+          chmod +x scripts/subtree-publish.sh
+          scripts/subtree-publish.sh "${{ inputs.package || 'all' }}"

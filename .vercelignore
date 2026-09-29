@@ -1,0 +1,37 @@
+# Generated / installed — Vercel regenerates these from source
+node_modules
+**/node_modules
+.next
+**/.next
+out
+**/out
+**/dist
+**/*.tsbuildinfo
+.turbo
+**/.turbo
+.vercel
+**/.vercel
+
+# Secrets — never upload
+.env
+.env.*
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Operator infrastructure — private wallet keys live here
+claudelance worker/
+claudelance-worker/
+**/.claudelance/
+
+# Not needed for the web build (addresses come from claudelance-types pkg)
+contracts/
+apps/relayer/data
+**/*.sqlite
+**/*.sqlite-*
+
+# Cruft
+.git
+.DS_Store
+**/.DS_Store
+*.log

@@ -1,0 +1,41 @@
+{
+  "name": "claudelance",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Onchain marketplace where idle Claude Code subscriptions earn cUSD, CELO, or USDC by solving GitHub bounties on Celo.",
+  "license": "MIT",
+  "author": "yeheskieltame",
+  "homepage": "https://github.com/yeheskieltame/claudelance#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yeheskieltame/claudelance.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yeheskieltame/claudelance/issues"
+  },
+  "keywords": [
+    "celo",
+    "claudelance",
+    "bounty",
+    "claude-code",
+    "ai-agent",
+    "minipay",
+    "cusd",
+    "monorepo"
+  ],
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "test:contracts": "cd contracts && forge test -vvv",
+    "clean": "pnpm -r run clean && rm -rf node_modules"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "chainId": 97,
+  "status": "DEPLOYED",
+  "note": "Deployed 2026-09-25 with DeployMocks.s.sol + DeployV3.s.sol --rpc-url bsc_testnet. Not verified on BscScan (no ETHERSCAN_API_KEY available).",
+  "v3": {
+    "proxy": "0xD13958F9b62E912CEd21Ba351f8aFaecc1C733C5",
+    "implementation": "0xEB194356B798b81586B589e294b8b1b989895C63",
+    "deployedAt": 132984885,
+    "version": "3.1.0",
+    "txs": {
+      "implementation": "0x78b61ad9f94530be3eb98301b713135c75101599b5e9f17fcdf407e191670173",
+      "proxy": "0x3f213abc085c8197abe0b0f5ba2d05ec579991dcaf5e2297a13d29a49a0a0d32"
+    }
+  },
+  "tokens": {
+    "USDT": "0x9200cABD0190EdC632691d58FB785e3A7272Ed1E",
+    "WBNB": "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
+    "USDC": "0xb796355023580Fb29f7Be47460A0079B12aFd03e"
+  },
+  "mocks": {
+    "MockUSDT": "0x9200cABD0190EdC632691d58FB785e3A7272Ed1E",
+    "MockWBNB_unused": "0x3F3804Af6303e4a7fE4394B55A4422630d0be518",
+    "MockUSDC": "0xb796355023580Fb29f7Be47460A0079B12aFd03e"
+  },
+  "minBounty": {
+    "USDT": "0.5",
+    "WBNB": "0.001",
+    "USDC": "0.5"
+  },
+  "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  "reputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+  "treasury": "0x3F46b654035aA92738FE4dC7dc9538Ca9bA07CEA",
+  "ciRelayer": "0x860DdD8fb4f4E3cA87854812444C45DcB74cb96e",
+  "owner": "0x3F46b654035aA92738FE4dC7dc9538Ca9bA07CEA"
+}
