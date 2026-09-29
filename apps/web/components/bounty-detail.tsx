@@ -23,7 +23,7 @@ import type { Address, Hash } from "viem";
 import { GlassCard } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTransactionToast } from "@/components/transaction-toast";
-import { DEFAULT_CHAIN_ID } from "@/lib/chain";
+import { DEFAULT_CHAIN_ID, isLiveChain } from "@/lib/chain";
 import { formatTokenAmount } from "@/lib/format-token";
 import { miniPayFeeCurrency } from "@/lib/wallet/fee-currency";
 import { cn, shortAddress } from "@/lib/utils";
@@ -308,13 +308,14 @@ function PickWinnerCard({
   useRefreshOnConfirmed(txHash);
 
   const [selected, setSelected] = React.useState<string>(submissions[0]?.worker ?? "");
-  const core = deploymentByChainId(DEFAULT_CHAIN_ID)!.core as Address; // bounties live on Celo (default chain)
+  const activeChainId = isLiveChain(chainId) ? chainId! : DEFAULT_CHAIN_ID;
+  const core = deploymentByChainId(activeChainId)!.core as Address; // follows the wallet when on a live chain (Celo / BSC testnet)
 
   const pick = async () => {
     if (!selected) return;
     try {
       const hash = (await writeContractAsync({
-        chainId: DEFAULT_CHAIN_ID,
+        chainId: activeChainId,
         address: core,
         abi: CLAUDELANCE_CORE_V3_ABI,
         functionName: "pickWinner",
@@ -417,12 +418,13 @@ function CancelExpiredCard({
   const graceEndsAt = deadline + RESOLUTION_GRACE_PERIOD_SECONDS;
   const graceRemaining = graceEndsAt - nowSeconds;
 
-  const core = deploymentByChainId(DEFAULT_CHAIN_ID)!.core as Address; // bounties live on Celo (default chain)
+  const activeChainId = isLiveChain(chainId) ? chainId! : DEFAULT_CHAIN_ID;
+  const core = deploymentByChainId(activeChainId)!.core as Address; // follows the wallet when on a live chain (Celo / BSC testnet)
 
   const cancel = async () => {
     try {
       const hash = (await writeContractAsync({
-        chainId: DEFAULT_CHAIN_ID,
+        chainId: activeChainId,
         address: core,
         abi: CLAUDELANCE_CORE_V3_ABI,
         functionName: "cancelExpired",
@@ -485,13 +487,14 @@ function CancelExpiredCard({
  */
 function ReputationAttestedLine({ bountyId }: { bountyId: string }) {
   const chainId = useChainId();
-  const core = deploymentByChainId(DEFAULT_CHAIN_ID)!.core as Address; // bounties live on Celo (default chain)
+  const activeChainId = isLiveChain(chainId) ? chainId! : DEFAULT_CHAIN_ID;
+  const core = deploymentByChainId(activeChainId)!.core as Address; // follows the wallet when on a live chain (Celo / BSC testnet)
   const { data: attested } = useReadContract({
     address: core,
     abi: CLAUDELANCE_CORE_V3_ABI,
     functionName: "isReputationAttested",
     args: [BigInt(bountyId)],
-    chainId: DEFAULT_CHAIN_ID,
+    chainId: activeChainId,
   });
 
   if (attested === undefined) return null;
@@ -542,7 +545,8 @@ function SubmitDeliverableCard({ bountyId, bountyType = 0 }: { bountyId: string;
   const [deliverableUrl, setDeliverableUrl] = React.useState("");
   const [contentHash, setContentHash] = React.useState("");
   const [ackChecked, setAckChecked] = React.useState(false);
-  const core = deploymentByChainId(DEFAULT_CHAIN_ID)!.core as Address; // bounties live on Celo (default chain)
+  const activeChainId = isLiveChain(chainId) ? chainId! : DEFAULT_CHAIN_ID;
+  const core = deploymentByChainId(activeChainId)!.core as Address; // follows the wallet when on a live chain (Celo / BSC testnet)
 
   // Legal (8) and Finance (9) require the worker to acknowledge a disclaimer,
   // recorded in the submission metadata for the relayer to verify.
@@ -572,7 +576,7 @@ function SubmitDeliverableCard({ bountyId, bountyType = 0 }: { bountyId: string;
         ? buildSubmissionMetadata({ taskType: bountyType, at: Math.floor(Date.now() / 1000), ack: true })
         : "";
       const hash = (await writeContractAsync({
-        chainId: DEFAULT_CHAIN_ID,
+        chainId: activeChainId,
         address: core,
         abi: CLAUDELANCE_CORE_V3_ABI,
         functionName: "submitDeliverable",
@@ -660,12 +664,13 @@ function SettleStakeCard({
   });
   useRefreshOnConfirmed(txHash);
 
-  const core = deploymentByChainId(DEFAULT_CHAIN_ID)!.core as Address; // bounties live on Celo (default chain)
+  const activeChainId = isLiveChain(chainId) ? chainId! : DEFAULT_CHAIN_ID;
+  const core = deploymentByChainId(activeChainId)!.core as Address; // follows the wallet when on a live chain (Celo / BSC testnet)
 
   const settle = async () => {
     try {
       const hash = (await writeContractAsync({
-        chainId: DEFAULT_CHAIN_ID,
+        chainId: activeChainId,
         address: core,
         abi: CLAUDELANCE_CORE_V3_ABI,
         functionName: "settleStake",
@@ -717,12 +722,13 @@ function WithdrawEarningsCard({ token }: { token: string }) {
   });
   useRefreshOnConfirmed(txHash);
 
-  const core = deploymentByChainId(DEFAULT_CHAIN_ID)!.core as Address; // bounties live on Celo (default chain)
+  const activeChainId = isLiveChain(chainId) ? chainId! : DEFAULT_CHAIN_ID;
+  const core = deploymentByChainId(activeChainId)!.core as Address; // follows the wallet when on a live chain (Celo / BSC testnet)
 
   const withdraw = async () => {
     try {
       const hash = (await writeContractAsync({
-        chainId: DEFAULT_CHAIN_ID,
+        chainId: activeChainId,
         address: core,
         abi: CLAUDELANCE_CORE_V3_ABI,
         functionName: "withdrawEarnings",
@@ -804,7 +810,8 @@ function ClaimSlotCard({
   });
 
   const isFull = claimedSlots >= maxSlots;
-  const core = deploymentByChainId(DEFAULT_CHAIN_ID)!.core as Address; // bounties live on Celo (default chain)
+  const activeChainId = isLiveChain(chainId) ? chainId! : DEFAULT_CHAIN_ID;
+  const core = deploymentByChainId(activeChainId)!.core as Address; // follows the wallet when on a live chain (Celo / BSC testnet)
   const { symbol: tokenSymbol, decimals } = tokenMeta(token);
   const stake = BigInt(stakeRequired);
   const stakeFormatted = formatTokenAmount(stake, decimals, 4);
@@ -816,12 +823,12 @@ function ClaimSlotCard({
     abi: erc20Abi,
     functionName: "allowance",
     args: address ? [address, core] : undefined,
-    chainId: DEFAULT_CHAIN_ID,
+    chainId: activeChainId,
     query: { enabled: Boolean(address) && stake > 0n },
   });
   const { data: approveReceipt } = useWaitForTransactionReceipt({
     hash: approveHash ?? undefined,
-    chainId: DEFAULT_CHAIN_ID,
+    chainId: activeChainId,
   });
   React.useEffect(() => {
     if (approveReceipt?.status === "success") void refetchAllowance();
@@ -833,7 +840,7 @@ function ClaimSlotCard({
   const approve = async () => {
     try {
       const hash = (await writeContractAsync({
-        chainId: DEFAULT_CHAIN_ID,
+        chainId: activeChainId,
         address: token as Address,
         abi: erc20Abi,
         functionName: "approve",
@@ -849,7 +856,7 @@ function ClaimSlotCard({
   const claim = async () => {
     try {
       const hash = (await writeContractAsync({
-        chainId: DEFAULT_CHAIN_ID,
+        chainId: activeChainId,
         address: core,
         abi: CLAUDELANCE_CORE_V3_ABI,
         functionName: "claimSlot",
