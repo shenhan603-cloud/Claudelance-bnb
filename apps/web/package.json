@@ -20,7 +20,7 @@
     "@yeheskieltame/claudelance-types": "workspace:*",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "framer-motion": "^12.40.0",
+    "framer-motion": "^14.0.0",
     "geist": "^1.7.0",
     "lucide-react": "^0.453.0",
     "next": "^15.0.0",
